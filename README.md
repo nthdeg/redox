@@ -37,12 +37,7 @@ This repository does not provide binaries, you will need to compile them yoursel
 [Install Rust](https://www.rust-lang.org/tools/install)  
 Follow instructions for your platform and install. Make sure environment variables are correct and that you have a config.toml file in your cargo directory if needed.
 
-For the client/server I recommend statically building due to dependencies on the hosts.
-For creating a project, execute:  
-```
-`cargo new <name>`
-```
-This will automatically create the structured project folders with:
+This is the basic structure of all project folders:
 
 ```bash  
 project
@@ -52,12 +47,13 @@ project
 ```
 
 Cargo.toml contains the dependencies and the configuration for the compilation.
-main.rs is the main file that will be compiled along with any potential directories that contain libraries.
+main.rs is the main file that will be compiled along with any directories that contain libraries.
 
-For compiling the project, go into the project directory and execute:  
+For compiling the project, go into each project directory and execute:  
 ```
 `cargo build`
 ```
+this will give you executables you can use portably in each environment: Windows and Linux.
 
 If you want to build the final "release" version execute:  
 ```

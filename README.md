@@ -1,5 +1,5 @@
 <p align="center">
-    <img height="500" alt="Redox" src="https://github.com/nthdeg/redox/blob/main/redox.png">
+    <img height="400" alt="Redox" src="https://github.com/nthdeg/redox/blob/main/redox.png">
 </p>
 
 # REDOX #

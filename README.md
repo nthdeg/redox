@@ -4,7 +4,7 @@
 
 # REDOX #
 
-Redox will be a post exploitation offensive toolset. As of now this is a reverse shell written in [Rust](https://www.rust-lang.org/) currently tested on Windows and Linux. It comes with the implant (client) which can be compiled for different platforms. Once you set your server ip in the client implant and run your server, the clients will connect one at a time and you will be able to interact with the connected devices one at a time.
+Redox will be a post exploitation offensive toolset. As of now this is a reverse shell written in [Rust](https://www.rust-lang.org/) currently tested on Windows and Debian distros. It comes with the implant (client) which can be compiled for different platforms. Once you set your server ip in the client implant and run your server, the clients will connect one at a time and you will be able to interact with the connected devices one at a time.
 
 You can read and write to disk, run executables and all the things you can normally do in a shell.
 
@@ -14,7 +14,6 @@ You can read and write to disk, run executables and all the things you can norma
   * [To Do](#todo)
   * [Tools in this repo](#tools-in-this-repo)
   * [Compiling the tools](#compiling-the-tools-in-this-repo)
-  * [Compiling the tools in this repo](#Compiling-the-tools-in-this-repo)
 
 
 
@@ -38,6 +37,12 @@ This repository does not provide binaries, you will need to compile them yoursel
 [Install Rust](https://www.rust-lang.org/tools/install)  
 Follow instructions for your platform and install. Make sure environment variables are correct and that you have a config.toml file in your cargo directory if needed.
 
+## Linux Users
+Linux users make sure you have pkg-config installed
+```
+sudo apt install pkg-config
+```
+
 This is the basic structure of all project folders:
 
 ```bash  
@@ -49,6 +54,11 @@ project
 
 Cargo.toml contains the dependencies and the configuration for the compilation.
 main.rs is the main file that will be compiled along with any directories that contain libraries.
+
+For quickly running the project, go into each project directory and execute:  
+```
+`cargo run`
+```
 
 For compiling the project, go into each project directory and execute:  
 ```

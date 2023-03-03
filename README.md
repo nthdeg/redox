@@ -21,6 +21,7 @@ You can read and write to disk, run executables and all the things you can norma
 
 ## TODO:
 - [X] Add File transfer
+- [ ] Organize and display all current connections
 - [ ] Run implant in memory only
 - [ ] Hide network traffic
 

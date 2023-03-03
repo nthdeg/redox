@@ -8,12 +8,14 @@ Redox will be a post exploitation offensive toolset. As of now this is a reverse
 
 You can read and write to disk, run executables and all the things you can normally do in a shell.
 
+
 ## Table of Contents
 
 - [Redox](#redox)
   * [To Do](#todo)
   * [Tools in this repo](#tools-in-this-repo)
-  * [Compiling the tools](#compiling-the-tools-in-this-repo)
+  * [Compiling the tools](#compiling-the-tools)
+  * [Using the tools](#using-the-tools)
 
 
 
@@ -30,7 +32,7 @@ You can read and write to disk, run executables and all the things you can norma
 | [server](/server/src/main.rs)                                 | Server program that listens for client connections via TCP                                                                                                                                  |
 | [client](/client/src/main.rs)                                 | Client program that connects back to server listening for connections via TCP                                                                                                                                  |
 
-## Compiling the tools in this repo
+## Compiling the tools
 
 This repository does not provide binaries, you will need to compile them yourself.  
 
@@ -55,18 +57,23 @@ project
 Cargo.toml contains the dependencies and the configuration for the compilation.
 main.rs is the main file that will be compiled along with any directories that contain libraries.
 
-For quickly running the project, go into each project directory and execute:  
-```
-`cargo run`
-```
-
 For compiling the project, go into each project directory and execute:  
 ```
-`cargo build`
+cargo build
 ```
 this will give you executables you can use portably in each environment: Windows and Linux.
 
 If you want to build the final "release" version execute:  
 ```
-`cargo build --release`
+cargo build --release
+```
+## Using the Tools
+
+Chnage port declarations and launch server (line 165 & 179). 
+
+Run client with matchig port and your server IP.
+
+For quickly running the project, go into each project directory and execute:  
+```
+cargo run
 ```

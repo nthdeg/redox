@@ -90,7 +90,7 @@ use std::net::Ipv4Addr;
         // shortcut for help in all platforms 
         
         let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
-        reader.read_until(b'\0', &mut buffer);println!("Outside loop5");
+        reader.read_until(b'\0', &mut buffer);
         println!("client {} sent \n{}", clientaddr, String::from_utf8_lossy(&buffer));
     }
 }

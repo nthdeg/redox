@@ -13,15 +13,39 @@ fn executecmd(cmd:&str) -> String{
     let (base, temp) = client_os;
     let fullcmd =  temp + cmd;
     let cmds: Vec<&str> = fullcmd.split(" ").collect();
-    let res: Output = Command::new(base).args(&cmds).output().unwrap();
-    let stdout = String::from_utf8_lossy(res.stdout.as_slice());
-    let stderr = String::from_utf8_lossy(res.stdout.as_slice());
-    println!("Setup buffer {}", stdout);
+    let extra_args: bool = if cmds.len() > 1 {
+        true
+    } else {
+        false
+    };
+
+    let change_dir: bool = if extra_args {
+        cmds[1] == "cd"
+    } else {
+        false
+    };
+
+    let mut stdout = String::new();
+    let mut stderr = String::new();
+    if change_dir {
+        let dir = cmds[2].to_string();
+        if std::env::set_current_dir(dir.trim()).is_ok() {
+            let success = "New directory:";
+            stdout = [success, &dir].join(" ");
+            
+        } else {
+            stderr = "Could not change directory".to_owned();
+        }
+    } else {
+        let res: Output = Command::new(base).args(&cmds).output().unwrap();
+        stdout = String::from_utf8_lossy(res.stdout.as_slice()).to_string();
+        stderr = String::from_utf8_lossy(res.stdout.as_slice()).to_string();
+    }
     if stdout.len()>0{
-        return stdout.to_string();
+        return stdout;
     }
     else{
-        return stderr.to_string();
+        return stderr;
     }
 }
 

@@ -24,6 +24,7 @@ You can read and write to disk, run executables and all the things you can norma
 - [X] Organize and display all current connections
 - [ ] Run implant in memory only
 - [ ] Hide network traffic
+- [ ] Add tty support, for now tee relevant commands
 
 
 ## Tools in this repo
@@ -70,9 +71,9 @@ cargo build --release
 ```
 ## Using the Tools
 
-Chnage port declarations and launch server (line 165 & 179). 
+Change port declarations (line 264 - 265 Server side, and line 147 on the implant) and launch server. 
 
-Run client with matchig port and your server IP.
+Place implant on desired device and run the program.
 
 For quickly running the project, go into each project directory and execute:  
 ```

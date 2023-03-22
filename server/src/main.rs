@@ -5,14 +5,15 @@ use std::net::Ipv4Addr;
 // server program with multi connections
 // read write privs anywhere on disk if ran as current user
 
-    use std::mem::drop;
-    use std::net::{Shutdown, SocketAddrV4, TcpListener, TcpStream};
+use std::mem::drop;
+use std::net::{Shutdown, SocketAddrV4, TcpListener, TcpStream};
 
-    fn handle_connection(clientsocket: &mut TcpStream){
-        println!("Client connected: {}", clientsocket.local_addr().unwrap());
-        let clientaddr = clientsocket.peer_addr().unwrap();
-        println!(" 
-        _______________________________________________________
+fn handle_connection(clientsocket: &mut TcpStream){
+    println!("Client connected: {}", clientsocket.local_addr().unwrap());
+    let clientaddr = clientsocket.peer_addr().unwrap();
+    println!(" 
+    _______________________________________________________
+
 
         ███████████   ██████████ ██████████      ███████    █████ █████
         ░░███░░░░░███ ░░███░░░░░█░░███░░░░███   ███░░░░░███ ░░███ ░░███ 
@@ -22,15 +23,14 @@ use std::net::Ipv4Addr;
          ░███    ░███  ░███ ░   █ ░███    ███ ░░███     ███   ███ ░░███ 
          █████   █████ ██████████ ██████████   ░░░███████░   █████ █████
         ░░░░░   ░░░░░ ░░░░░░░░░░ ░░░░░░░░░░      ░░░░░░░    ░░░░░ ░░░░░ 
-                                                                        
-         _______________________________________________________       
+                                                                    
+        _______________________________________________________       
 
-         Type 'rtfm' for a menu of built in shortcuts
+        Type 'rtfm' for a menu of built in shortcuts
 
-         If multiple clients are connected, you can exit current sessions by typing 'quit' to switch to the next connected client        
+        If multiple clients are connected, you can exit current sessions by typing 'quit' to switch to the next connected client        
 
-          Client connected: {} <- {}\n", clientsocket.local_addr().unwrap(),clientaddr);
-    
+        Client connected: {} <- {}\n", clientsocket.local_addr().unwrap(),clientaddr);
     loop {
         println!("Enter Command to send: ");
         let mut msg = String::new();
@@ -56,6 +56,46 @@ use std::net::Ipv4Addr;
             println!("Sent flnm{}", &msg);
             let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
             println!("client {} sent \n{}", clientaddr, String::from_utf8_lossy(&buffer));
+        } else if (msg.trim().contains("tx")){ //send files to client
+            msg.push('\0');
+            let mut buffer: Vec<u8> = Vec::new();
+            clientsocket.write(msg.as_bytes());
+            println!("Sent tx command {}", &msg);
+            println!("Enter name of file to send: {}", &clientaddr);
+            let mut msg = String::new();
+            io::stdin().read_line(&mut msg).expect("String expected");
+            msg.push('\0');
+            let mut buffer: Vec<u8> = Vec::new();
+            clientsocket.write(msg.as_bytes());
+            println!("Sent flnm{}", &msg);
+            println!("Sent {}", &msg);
+            msg.push('\0');
+            let mut buffer: Vec<u8> = Vec::new();
+            clientsocket.write(msg.as_bytes());
+            println!("Sent tx command {}", &msg);
+            println!("Enter name of file path location: {}", &clientaddr);
+            let mut msg = String::new();
+            io::stdin().read_line(&mut msg).expect("String expected");
+            msg.push('\0');
+            let mut buffer: Vec<u8> = Vec::new();
+            clientsocket.write(msg.as_bytes());
+            println!("Sent flpath{}", &msg);
+            println!("Sent {}", &msg);
+            let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
+        } else if (msg.trim().contains("rx")){ //receive files from client
+            msg.push('\0');
+            let mut buffer: Vec<u8> = Vec::new();
+            clientsocket.write(msg.as_bytes());
+            println!("Sent rx command {}", &msg);
+            println!("Enter file name to download: {}", &clientaddr);
+            let mut msgfn = String::new();
+            io::stdin().read_line(&mut msgfn).expect("String expected");
+            msgfn.push('\0');
+            let mut buffer: Vec<u8> = Vec::new();
+            clientsocket.write(msgfn.as_bytes());
+            println!("Sent flnm{}", &msgfn);
+            let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
+            clientrx(&mut msgfn);
         } else {
             msg.push('\0');
             let mut buffer: Vec<u8> = Vec::new();
@@ -68,14 +108,20 @@ use std::net::Ipv4Addr;
             if cfg!(windows) {
                 println!("Usage: [COMMAND]           Gives result\n");
                 println!(" dl,                       Asks for source url and filename to write\n");
+                println!(" tx,                       Asks for filename to send from server in current directory\n");
+                println!(" rx,                       Asks for filename to receive from client in current directory\n");
                 println!(" quit,                     Quits current client connection\n");
             } else if cfg!(unix) { 
-                println!("Usage: man [OPTION...] [SECTION] PAGE...\n");
+                println!("Usage: [COMMAND]           Gives result\n");
                 println!(" dl,                       Asks for source url and filename to write\n");
+                println!(" tx,                       Asks for filename to send from server in current directory\n");
+                println!(" rx,                       Asks for filename to receive from client in current directory\n");
                 println!(" quit,                     Displays quits current client connection\n");
             } else if cfg!(target_os = "macos") {
-                println!("Usage: man [OPTION...] [SECTION] PAGE...\n");
+                println!("Usage: [COMMAND]           Gives result\n");
                 println!(" dl,                       Asks for source url and filename to write\n");
+                println!(" tx,                       Asks for filename to send from server in current directory\n");
+                println!(" rx,                       Asks for filename to receive from client in current directory\n");
                 println!(" quit,                     Displays quits current client connection\n");
             }
         }
@@ -93,6 +139,46 @@ use std::net::Ipv4Addr;
         reader.read_until(b'\0', &mut buffer);
         println!("client {} sent \n{}", clientaddr, String::from_utf8_lossy(&buffer));
     }
+}
+
+// downloads a file from current working directory located on client machine.
+// this cannot take in the filename from but almost works otherwise
+use std::io::{Read};
+use std::path::Path;
+fn handle_client_rx(mut stream: TcpStream){//,filenm: &mut String) { //, filepath: &mut String
+    let mut filename = [0; 128];
+    let bytes_read = stream.read(&mut filename).unwrap();
+    let original_filename = std::str::from_utf8(&filename[..bytes_read]).unwrap().trim();
+    println!("Received file {}", original_filename);
+    let mut newfilname = String::from(original_filename);println!("File {}", newfilname);
+    let mut file = std::fs::File::create(original_filename).unwrap();
+    let mut buffer = [0; 1024];
+    loop {
+        let bytes_read = stream.read(&mut buffer).unwrap();
+        if bytes_read == 0 {
+            break;
+        }
+        let data = &buffer[..bytes_read];
+        file.write_all(data).unwrap();
+    }
+    println!("Saved file {}", original_filename);
+}
+
+ fn clientrx(filenm: &mut String) {
+    let mut listener = TcpListener::bind("127.0.0.1:9001").unwrap();
+    for stream in listener.incoming() {
+        match stream {
+            Ok(stream) => {
+                std::thread::spawn(|| {
+                    handle_client_rx(stream);
+                });  return drop(listener);
+            }
+            Err(e) => {
+                println!("Error: {}", e);
+            }
+        }
+    }
+    drop(listener);
 }
 
 use std::cmp::min;
@@ -159,10 +245,17 @@ use tokio::runtime::Runtime;
 use tokio::time::{sleep, Duration};
 
 #[tokio::main]
-async fn main() {
+async fn main() { 
+    // set ip address and port here
+    let mut ipaddy = "0.0.0.0".to_string();
+    let port = 5358;
+    let port2 = "9001".to_string(); // for tx and rx of files
     
-    let ip = "0.0.0.0".parse::<Ipv4Addr>().unwrap();
-    let mut s = SocketAddrV4::new(ip, 5358);
+    let serveraddress = format!("{}:{}",ipaddy,port);
+    let serveraddresstx = format!("{}:{}",ipaddy,port2);
+    let ip = ipaddy.parse::<Ipv4Addr>().unwrap();
+    let portu16:u16 = port;
+    let mut s = SocketAddrV4::new(ip, port);
 
     println!("IP Address: {}", s.ip());
     println!("Port: {}", s.port());
@@ -170,12 +263,11 @@ async fn main() {
     let listener = TcpListener::bind(s);
 
     let listener: () = match listener {
-            Ok(l) => {
-                println!("Successfully binded to {}", l.local_addr().unwrap());
-            }
-            Err(e) => {println!("{}",e); exit(0);}
+        Ok(l) => {
+            println!("Successfully binded to {}", l.local_addr().unwrap());
+        }
+        Err(e) => {println!("{}",e); exit(0);}
     };
- 
     let listener = TcpListener::bind(format!("{}:5358", ip)).unwrap();
 
     // v2 using multi threading
@@ -184,6 +276,7 @@ async fn main() {
             Ok(mut stream) => {
                 thread::spawn(move|| {
                     // connection succeeded
+                    //tx();
                     handle_connection(&mut stream);
                 });
             }

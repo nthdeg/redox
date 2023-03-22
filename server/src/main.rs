@@ -281,7 +281,7 @@ async fn main() {
         Err(e) => {println!("{}",e); exit(0);}
     };
  
-    let listener = TcpListener::bind(format!("{}:5358", ip)).unwrap();
+    let listener = TcpListener::bind(serveraddress.to_string()).unwrap();
     let clients: Arc<Mutex<HashMap<String, TcpStream>>> = Arc::new(Mutex::new(HashMap::new()));
 
     // v2 using multi threading

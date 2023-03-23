@@ -5,10 +5,10 @@ use std::process::Output;
 
 fn executecmd(cmd:&str) -> String{
     let client_os: (&str, String);
-    client_os = if cfg!(target_os = "windows") {
-        ("cmd.exe", "/c ".to_owned())
+    if cfg!(target_os = "windows") {
+        client_os = ("cmd.exe", "/c ".to_owned())
     } else {
-        ("/bin/bash", "-c ".to_owned())
+        client_os = ("/bin/bash", "-c ".to_owned())
     };
     let (base, temp) = client_os;
     let fullcmd =  temp + cmd;

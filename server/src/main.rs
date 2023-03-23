@@ -177,6 +177,36 @@ fn handle_client_rx(mut stream: TcpStream){
     drop(listener);
 }
 
+fn send_to_client(socket:&mut TcpStream, filename: & String, port2: &String) -> std::io::Result<()> {
+    let fntext : String = String::from(filename.to_string()).trim_end_matches('\0').replace('\n', "").replace('\r', "");
+    let file_path = Path::new(&fntext);
+    println!("Opening file {:?}", file_path);
+    let mut file = File::open(&file_path)?;
+    let mut contents = Vec::new();
+    file.read_to_end(&mut contents);
+    let mut socket = socket;
+    // Send file name
+    let filename = file_path.file_name().unwrap().to_str().unwrap();
+    let filename_bytes = filename.as_bytes();
+    let filename_len = filename_bytes.len();
+    println!("Sending to socket");
+    socket.write_all(&filename_bytes)?;
+    println!(
+        "Sent filenm with {:?} bytes and contents: {}",
+        filename_bytes,
+        String::from_utf8_lossy(&filename_bytes)
+    );
+    // Send file contents
+    let contents_len = contents.len();
+    socket.write_all(&contents)?;
+    println!(
+        "Sent file with {} bytes and contents: {}",
+        contents_len,
+        String::from_utf8_lossy(&contents)
+    );
+    Ok(())
+}
+
 use std::cmp::min;
 use std::fs::{File, OpenOptions};
 use std::io::{Seek};

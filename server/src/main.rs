@@ -191,18 +191,13 @@ fn send_to_client(socket:&mut TcpStream, filename: & String, port2: &String) -> 
     let filename_len = filename_bytes.len();
     println!("Sending to socket");
     socket.write_all(&filename_bytes)?;
-    println!(
-        "Sent filenm with {:?} bytes and contents: {}",
-        filename_bytes,
-        String::from_utf8_lossy(&filename_bytes)
-    );
     // Send file contents
     let contents_len = contents.len();
     socket.write_all(&contents)?;
     println!(
-        "Sent file with {} bytes and contents: {}",
+        "Sent file {} containing {} bytes",
         contents_len,
-        String::from_utf8_lossy(&contents)
+        String::from_utf8_lossy(&filename_bytes)
     );
     Ok(())
 }

@@ -71,7 +71,7 @@ cargo build --release
 ```
 ## Using the Tools
 
-Change port declarations (line 264 - 265 Server side, and line 147 on the implant) and launch server. 
+Change port declarations (line 264 - 265 Server side, and line 189-191 on the implant) and launch server.
 
 Place implant on desired device and run the program.
 

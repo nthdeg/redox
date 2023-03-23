@@ -4,9 +4,9 @@
 
 # REDOX #
 
-Redox will be a post exploitation offensive toolset. As of now this is a reverse shell written in [Rust](https://www.rust-lang.org/) currently tested on Windows and Debian distros. It comes with the implant (client) which can be compiled for different platforms. Once you set your server ip in the client implant and run your server, the clients will connect one at a time and you will be able to interact with the connected devices one at a time.
+Redox is a C2 framework in its infancy written using [Rust](https://www.rust-lang.org/) and has been tested on Windows and Debian distros. It comes with the implant (client) which can be compiled for different platforms. Once you set your server ip in the client implant and run your server, the clients will connect one at a time and you will be able to interact with the connected devices one at a time.
 
-You can read and write to disk, run executables and all the things you can normally do in a shell.
+When the implant is ran as user level, you can read and write to disk, run executables, download & transfer files from the C2 or remote locations and all the things you can normally do in a shell.
 
 
 ## Table of Contents

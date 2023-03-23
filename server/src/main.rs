@@ -4,7 +4,7 @@ use std::net::Ipv4Addr;
 use std::mem::drop;
 use std::net::{Shutdown, SocketAddrV4, TcpListener, TcpStream};
 
-fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<String, TcpStream>>>) {
+fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<String, TcpStream>>>, port2: &String) {
     println!("New client connected: {}", clientsocket.local_addr().unwrap());
     let clientaddr = clientsocket.peer_addr().unwrap();
     let client_list = clients.lock().unwrap().keys().cloned().collect::<Vec<String>>();
@@ -46,35 +46,25 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
             msg.push('\0');
             let mut buffer: Vec<u8> = Vec::new();
             clientsocket.write(msg.as_bytes());
-            println!("Sent flnm{}", &msg);
             let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
             println!("client {} sent \n{}", clientaddr, String::from_utf8_lossy(&buffer));
         } else if (msg.trim().contains("tx")){ //send files to client
             msg.push('\0');
             let mut buffer: Vec<u8> = Vec::new();
             clientsocket.write(msg.as_bytes());
-            println!("Sent tx command {}", &msg);
             println!("Enter name of file to send: {}", &clientaddr);
             let mut msg = String::new();
             io::stdin().read_line(&mut msg).expect("String expected");
             msg.push('\0');
             let mut buffer: Vec<u8> = Vec::new();
             clientsocket.write(msg.as_bytes());
-            println!("Sent flnm{}", &msg);
             println!("Sent {}", &msg);
-            msg.push('\0');
-            let mut buffer: Vec<u8> = Vec::new();
-            clientsocket.write(msg.as_bytes());
-            println!("Sent tx command {}", &msg);
-            println!("Enter name of file path location: {}", &clientaddr);
-            let mut msg = String::new();
-            io::stdin().read_line(&mut msg).expect("String expected");
-            msg.push('\0');
-            let mut buffer: Vec<u8> = Vec::new();
-            clientsocket.write(msg.as_bytes());
-            println!("Sent flpath{}", &msg);
-            println!("Sent {}", &msg);
+            let clientaddrstr = clientaddr.to_string();
+            let clientaddrstr2 = clientaddrstr.split(":").nth(0).unwrap();
+            let port2 = "9001".to_string();
+            let clientaddrtx = format!("{}:{}",clientaddrstr2,port2);println!("test ip client2: {}", clientaddrtx);
             let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
+            send_to_client(&mut TcpStream::connect(clientaddrtx).unwrap(), &mut msg, &port2);
         } else if (msg.trim().contains("rx")){ //receive files from client
             msg.push('\0');
             let mut buffer: Vec<u8> = Vec::new();
@@ -88,7 +78,8 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
             clientsocket.write(msgfn.as_bytes());
             println!("Sent flnm{}", &msgfn);
             let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
-            clientrx(&mut msgfn);
+            let p2 = port2.parse::<u16>().unwrap();
+            clientrx(&mut msgfn, p2);
         } else if (msg.trim().contains("agents")){
             if let Some(last_client) = client_list.last() {
                 println!("The current active Agent is: {}", last_client);
@@ -97,7 +88,6 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
             }
             println!("We have {} Active agents", num_clients);
             println!("With ID's: {:?}\n", client_list);
-            //println!("The current active Agent is: {}", num_clients.last());
             continue;
         } else {
             msg.push('\0');
@@ -114,21 +104,21 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
                 println!(" tx,                       Asks for filename to send from server in current directory\n");
                 println!(" rx,                       Asks for filename to receive from client in current directory\n");
                 println!(" quit,                     Quits current client connection\n");
-                println!(" agents,                   Shows connected devices. Typing 'quit' to switch to the next connected client\n");
+                println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
             } else if cfg!(unix) { 
                 println!("Usage: [COMMAND]           Gives result\n");
                 println!(" dl,                       Asks for source url and filename to write\n");
                 println!(" tx,                       Asks for filename to send from server in current directory\n");
                 println!(" rx,                       Asks for filename to receive from client in current directory\n");
                 println!(" quit,                     Displays quits current client connection\n");
-                println!(" agents,                   Shows connected devices. Typing 'quit' to switch to the next connected client\n");
+                println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
             } else if cfg!(target_os = "macos") {
                 println!("Usage: [COMMAND]           Gives result\n");
                 println!(" dl,                       Asks for source url and filename to write\n");
                 println!(" tx,                       Asks for filename to send from server in current directory\n");
                 println!(" rx,                       Asks for filename to receive from client in current directory\n");
                 println!(" quit,                     Displays quits current client connection\n");
-                println!(" agents,                   Shows connected devices. Typing 'quit' to switch to the next connected client\n");
+                println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
             }
         }
         msg.push('\0');
@@ -169,8 +159,9 @@ fn handle_client_rx(mut stream: TcpStream){
     println!("Saved file {}", original_filename);
 }
 
- fn clientrx(filenm: &mut String) {
-    let mut listener = TcpListener::bind("0.0.0.0:9001").unwrap();
+ fn clientrx(filenm: &mut String, port2: u16) {
+    let clientaddrtx = format!("0.0.0.0:{}",port2);
+    let mut listener = TcpListener::bind(clientaddrtx).unwrap();
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
@@ -274,7 +265,6 @@ async fn main() {
         }
         Err(e) => {println!("{}",e); exit(0);}
     };
- 
     let listener = TcpListener::bind(serveraddress.to_string()).unwrap();
     let clients: Arc<Mutex<HashMap<String, TcpStream>>> = Arc::new(Mutex::new(HashMap::new()));
 
@@ -283,10 +273,10 @@ async fn main() {
         match stream {
             Ok(mut stream) => {
                 let clients_clone = clients.clone();
+                let port2clone = port2.clone();
                 let client_id = stream.peer_addr().unwrap().to_string();
                  // Add the new client to the hashmap
                  clients_clone.lock().unwrap().insert(client_id.clone(), stream.try_clone().unwrap());
-
                  // Print the list of connected clients
                  let client_list = clients_clone.lock().unwrap()
                  .keys()
@@ -295,18 +285,14 @@ async fn main() {
                  .iter()
                  .map(|s| s.to_string())
                  .collect::<Vec<String>>();
-
                 // Spawn a new thread to handle incoming connections
                 thread::spawn(move|| {
                     // connection succeeded
-                    // tx();
-                    handle_connection(&mut stream, &clients_clone);
+                    handle_connection(&mut stream, &clients_clone, &port2clone);
                     // Remove the client from the hashmap when the connection is closed
                     clients_clone.lock().unwrap().remove(&client_id);
                     // Print the updated list of connected clients
-                    //let client_list = clients_clone.lock().unwrap().keys().collect::<Vec<&String>>();
                     let client_list = clients_clone.lock().unwrap().keys().cloned().collect::<Vec<String>>();
-
                     println!("Connected clients: {:?}", client_list);
                 });
             }

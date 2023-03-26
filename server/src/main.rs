@@ -74,12 +74,10 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
             let mut msgfn = String::new();
             io::stdin().read_line(&mut msgfn).expect("String expected");
             msgfn.push('\0');
-            let mut buffer: Vec<u8> = Vec::new();
             clientsocket.write(msgfn.as_bytes());
-            println!("Sent flnm{}", &msgfn);
+            println!("Sent flnm: {}", &msgfn);
             let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
-            let p2 = port2.parse::<u16>().unwrap();
-            clientrx(&mut msgfn, p2);
+            handle_client_rx(clientsocket);
         } else if (msg.trim().contains("agents")){
             if let Some(last_client) = client_list.last() {
                 println!("The current active Agent is: {}", last_client);
@@ -140,41 +138,25 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
 // this cannot take in the filename from but almost works otherwise
 use std::io::{Read};
 use std::path::Path;
-fn handle_client_rx(mut stream: TcpStream){
-    let mut filename = [0; 128];
-    let bytes_read = stream.read(&mut filename).unwrap();
-    let original_filename = std::str::from_utf8(&filename[..bytes_read]).unwrap().trim();
-    println!("Received file {}", original_filename);
-    let mut newfilname = String::from(original_filename);println!("File {}", newfilname);
-    let mut file = std::fs::File::create(original_filename).unwrap();
+
+ fn handle_client_rx(stream: &mut TcpStream) -> std::io::Result<()> {
+    println!("Enter filename to save: ");
+    let mut filename = String::new();
+    io::stdin().read_line(&mut filename).expect("String expected");
+    println!("Creating file {}", filename.replace('\n', "").replace('\r', ""));
+
+    // Get File contents
+    let mut file = File::create(filename.replace('\n', "").replace('\r', "")).unwrap();
     let mut buffer = [0; 1024];
+    stream.set_read_timeout(Some(Duration::new(5, 0)));
     loop {
-        let bytes_read = stream.read(&mut buffer).unwrap();
+        let bytes_read = stream.read(&mut buffer)?;
         if bytes_read == 0 {
             break;
         }
-        let data = &buffer[..bytes_read];
-        file.write_all(data).unwrap();
+        file.write_all(&buffer[..bytes_read])?;
     }
-    println!("Saved file {}", original_filename);
-}
-
- fn clientrx(filenm: &mut String, port2: u16) {
-    let clientaddrtx = format!("0.0.0.0:{}",port2);
-    let mut listener = TcpListener::bind(clientaddrtx).unwrap();
-    for stream in listener.incoming() {
-        match stream {
-            Ok(stream) => {
-                std::thread::spawn(|| {
-                    handle_client_rx(stream);
-                });  return drop(listener);
-            }
-            Err(e) => {
-                println!("Error: {}", e);
-            }
-        }
-    }
-    drop(listener);
+    Ok(())
 }
 
 fn send_to_client(socket:&mut TcpStream, filename: & String, port2: &String) -> std::io::Result<()> {

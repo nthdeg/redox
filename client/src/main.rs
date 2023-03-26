@@ -38,7 +38,7 @@ fn executecmd(cmd: &str) -> String {
     let mut stdout = String::new();
     let mut stderr = String::new();
     if change_dir {
-        let dir = cmd_parts[2].to_string();
+        let dir = cmd_parts[1].to_string();
         println!("Moving dir: {}",dir);
         if std::env::set_current_dir(dir.trim()).is_ok() {
             let success = "New directory:";

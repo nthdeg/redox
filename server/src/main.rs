@@ -28,7 +28,7 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
         println!("Enter Command to send: ");
         let mut msg = String::new();
         io::stdin().read_line(&mut msg).expect("String expected");
-        if msg.trim().contains("dl"){
+        if input.trim()==String::from("dl"){
             msg.push('\0');
             let mut buffer: Vec<u8> = Vec::new();
             clientsocket.write(msg.as_bytes());
@@ -48,7 +48,7 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
             clientsocket.write(msg.as_bytes());
             let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
             println!("client {} sent \n{}", clientaddr, String::from_utf8_lossy(&buffer));
-        } else if (msg.trim().contains("tx")){ //send files to client
+        } else if input.trim()==String::from("tx"){ //send files to client
             msg.push('\0');
             let mut buffer: Vec<u8> = Vec::new();
             clientsocket.write(msg.as_bytes());
@@ -61,7 +61,7 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
             println!("Sent {}", &msg);
             let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
             send_to_client(clientsocket, &msg);
-        } else if (msg.trim().contains("rx")){ //receive files from client
+        } else if input.trim()==String::from("rx")){ //receive files from client
             msg.push('\0');
             let mut buffer: Vec<u8> = Vec::new();
             clientsocket.write(msg.as_bytes());
@@ -74,7 +74,7 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
             println!("Sent flnm: {}", &msgfn);
             let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
             handle_client_rx(clientsocket);
-        } else if (msg.trim().contains("agents")){
+        } else if input.trim()==String::from("agents"){
             if let Some(last_client) = client_list.last() {
                 println!("The current active Agent is: {}", last_client);
             } else {
@@ -90,7 +90,7 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
             println!("Sent {}", &msg);
             let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
         }
-        if msg.trim().contains("rtfm"){ 
+        if input.trim()==String::from("rtfm"){ 
             println!("THE MANUAL_________________________________________________________________\n");
             if cfg!(windows) {
                 println!("Usage: [COMMAND]           Gives result\n");
@@ -117,7 +117,7 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
         }
         msg.push('\0');
         let mut buffer: Vec<u8> = Vec::new();
-        if msg.trim().contains("quit"){
+        if input.trim()==String::from("quit"){
             println!("shutting down client stream: {}", &clientaddr);
             clientsocket.shutdown(Shutdown::Both);
             println!("end of connections, crtl + c to terminate server program: {}", clientsocket.local_addr().unwrap());

@@ -59,12 +59,8 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
             let mut buffer: Vec<u8> = Vec::new();
             clientsocket.write(msg.as_bytes());
             println!("Sent {}", &msg);
-            let clientaddrstr = clientaddr.to_string();
-            let clientaddrstr2 = clientaddrstr.split(":").nth(0).unwrap();
-            let port2 = "9001".to_string();
-            let clientaddrtx = format!("{}:{}",clientaddrstr2,port2);println!("test ip client2: {}", clientaddrtx);
             let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
-            send_to_client(&mut TcpStream::connect(clientaddrtx).unwrap(), &mut msg, &port2);
+            send_to_client(clientsocket, &msg);
         } else if (msg.trim().contains("rx")){ //receive files from client
             msg.push('\0');
             let mut buffer: Vec<u8> = Vec::new();
@@ -135,7 +131,9 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
 }
 
 // downloads a file from current working directory located on client machine.
-// this cannot take in the filename from but almost works otherwise
+// this cannot take in the filename yet
+use std::fs;
+use std::io::prelude::*;
 use std::io::{Read};
 use std::path::Path;
 
@@ -159,11 +157,13 @@ use std::path::Path;
     Ok(())
 }
 
-fn send_to_client(socket:&mut TcpStream, filename: & String, port2: &String) -> std::io::Result<()> {
+fn send_to_client(socket:&mut TcpStream, filename: & String) -> std::io::Result<()> { //port2: &String
     let fntext : String = String::from(filename.to_string()).trim_end_matches('\0').replace('\n', "").replace('\r', "");
     let file_path = Path::new(&fntext);
     println!("Opening file {:?}", file_path);
-    let mut file = File::open(&file_path)?;
+    let mut file = File::open(&file_path).map_err(|e| {
+        std::io::Error::new(std::io::ErrorKind::NotFound, format!("Failed to open file: {:?}", file_path))
+    })?;
     let mut contents = Vec::new();
     file.read_to_end(&mut contents);
     let mut socket = socket;
@@ -171,15 +171,13 @@ fn send_to_client(socket:&mut TcpStream, filename: & String, port2: &String) -> 
     let filename = file_path.file_name().unwrap().to_str().unwrap();
     let filename_bytes = filename.as_bytes();
     let filename_len = filename_bytes.len();
-    println!("Sending to socket");
-    socket.write_all(&filename_bytes)?;
-    // Send file contents
     let contents_len = contents.len();
     socket.write_all(&contents)?;
     println!(
-        "Sent file {} containing {} bytes",
+        "Sent file {} containing {} bytes {:?}",
         contents_len,
-        String::from_utf8_lossy(&filename_bytes)
+        String::from_utf8_lossy(&filename_bytes),
+        contents
     );
     Ok(())
 }

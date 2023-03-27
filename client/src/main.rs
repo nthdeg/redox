@@ -60,7 +60,6 @@ fn executecmd(cmd: &str) -> String {
         stderr
     }
 }
-
 use std::io::{Read};
 use std::path::Path;
 fn handle_client_tx(mut stream: TcpStream){
@@ -83,7 +82,6 @@ fn handle_client_tx(mut stream: TcpStream){
 }
 
  fn clienttx(filenm: String, serveraddresstx: String) {
-    println!("inside loop");
     let mut listener = TcpListener::bind(serveraddresstx.clone()).unwrap();
     println!("sver check: {}", serveraddresstx);
     println!("Binded");
@@ -109,21 +107,33 @@ use std::io::prelude::*;
 fn send_to_server(socket:&mut TcpStream, filename: & str) -> std::io::Result<()> {
     let file_path = Path::new(filename);
     let mut file = File::open(&file_path)?;
-    let metadata = file.metadata().unwrap();
-    let mut buffer = vec![0; metadata.len() as usize];
-    file.read_exact(&mut buffer)?;
-    socket.write_all(&buffer)?;
+    let mut contents = Vec::new();
+    file.read_to_end(&mut contents);
+    let mut socket = socket;
 
-    let contents_len = buffer.len();
+    // Send file name
+    let filename = file_path.file_name().unwrap().to_str().unwrap();
+    let filename_bytes = filename.as_bytes();
+    let filename_len = filename_bytes.len();
+    socket.write_all(&filename_bytes)?;
+
+    println!(
+        "Sent filenm with {:?} bytes and contents: {}",
+        filename_bytes,
+        String::from_utf8_lossy(&filename_bytes)
+    );
+
+    // Send file contents
+    let contents_len = contents.len();
+    socket.write_all(&contents)?;
 
     println!(
         "Sent file with {} bytes and contents: {}",
         contents_len,
-        String::from_utf8_lossy(&buffer)
+        String::from_utf8_lossy(&contents)
     );
     Ok(())
 }
-
 use std::cmp::min;
 use std::fs::{File, OpenOptions};
 use std::io::{Seek};
@@ -200,6 +210,7 @@ async fn main() {
         reader.read_until(b'\0', &mut buffer);
         println!("reciever from server: {}", String::from_utf8_lossy(&buffer).trim());
         let text : String = String::from_utf8_lossy(&buffer).trim_end_matches('\0').replace('\n', "").replace('\r', "");
+        
         if buffer.len()==0 ||
         &text=="quit"{
             println!("break");
@@ -228,31 +239,27 @@ async fn main() {
             let mut buffer:Vec<u8> = Vec::new();
             let mut reader = BufReader::new(&client);
             reader.read_until(b'\0', &mut buffer);
-            println!("reciever file downloading: {}", String::from_utf8_lossy(&buffer).trim());
-            let urltext : String = String::from_utf8_lossy(&buffer).trim_end_matches('\0').replace('\n', "").replace('\r', "");
-            let mut buffer:Vec<u8> = Vec::new();
-            let mut reader = BufReader::new(&client);
             let fntext : String = String::from_utf8_lossy(&buffer).trim_end_matches('\0').replace('\n', "").replace('\r', "");
-            println!("recieving files...");
-            clienttx(fntext, serveraddresstx.clone());
+            println!("recieving files... {}", fntext);
+            handle_client_tx(&mut client, &fntext);
             println!("Files downloaded...");
+            let mut output =executecmd(String::from_utf8_lossy(&buffer).trim_end_matches('\0'));
+            output.push('\0');
+            client.write(&mut output.as_bytes());
         }
-
+        
         else if &text=="rx"{ //uploading to server 
             let mut buffer:Vec<u8> = Vec::new();
             let mut reader = BufReader::new(&client);
             reader.read_until(b'\0', &mut buffer);
             println!("reciever from server in tx 1: {}", String::from_utf8_lossy(&buffer).trim());
             let fntext : String = String::from_utf8_lossy(&buffer).trim_end_matches('\0').replace('\n', "").replace('\r', "");
-            let mut buffer:Vec<u8> = Vec::new();
-            let mut reader = BufReader::new(&client);
-            //reader.read_until(b'\0', &mut buffer);
             println!("reciever from server in rx mode: {}", String::from_utf8_lossy(&buffer).trim()); // dl input capture
-            let fnpath : String = String::from_utf8_lossy(&buffer).trim_end_matches('\0').replace('\n', "").replace('\r', "");
             println!("sending files...");
             send_to_server(&mut client, &fntext);
             println!("sent to server...");
         }
+        
         else {
             let mut output =executecmd(String::from_utf8_lossy(&buffer).trim_end_matches('\0'));
             output.push('\0');

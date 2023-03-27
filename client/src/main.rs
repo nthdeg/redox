@@ -243,7 +243,7 @@ async fn main() {
             println!("recieving files... {}", fntext);
             handle_client_tx(&mut client, &fntext);
             println!("Files downloaded...");
-            let mut output =executecmd(String::from_utf8_lossy(&buffer).trim_end_matches('\0'));
+            let mut output =String::from("").to_string();
             output.push('\0');
             client.write(&mut output.as_bytes());
         }

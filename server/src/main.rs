@@ -87,7 +87,7 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
             io::stdin().read_line(&mut msg).expect("String expected");
             let mut output =executecmd(String::from(&msg).trim_end_matches('\0'));
             output.push('\0');
-            println!("Local Returns \n\n{}", &output);
+            println!("Local Returns \n{}", &output);
             continue;
         } else {
             msg.push('\0');
@@ -259,16 +259,15 @@ fn executecmd(cmd: &str) -> String {
         client_os = ("/bin/bash", "-c");
     }
     let mut cmd_parts = vec![client_os.1, cmd];
-    let extra_args: bool = cmd.contains(' ');//if extra_args {println!("Extra args conf")};
+    let extra_args: bool = cmd.contains(' ');
 
     let change_dir: bool = if extra_args {
         cmd_parts[1] == "cd"
     } else {
         false
     };
-    //println!("change_dir1 is: {} value is: {}", change_dir, cmd_parts[0]);
     let mut change_dir: bool = false;
-    let mut cmd_parts_temp: Vec<&str> = ["",""].to_vec();// = cmd.split(" ").collect();
+    let mut cmd_parts_temp: Vec<&str> = ["",""].to_vec();
     if extra_args {
         //change so that we dont split for unix as then strip \r off
         if cfg!(unix){
@@ -282,7 +281,6 @@ fn executecmd(cmd: &str) -> String {
         else {
             cmd_parts = cmd.split(" ").collect();
         }
-        
         //println!("change_dir2 is: {} value is: {}", change_dir, cmd_parts[0]);
         change_dir = if extra_args {
             cmd_parts[0] == "cd"
@@ -333,11 +331,9 @@ fn executecmd(cmd: &str) -> String {
         }
     } else {
         let res: Output = Command::new(client_os.0).args(cmd_parts.clone()).output().unwrap();
-        
         stdout = String::from_utf8_lossy(res.stdout.as_slice()).to_string();
         stderr = String::from_utf8_lossy(res.stdout.as_slice()).to_string();
     }
-
     if stdout.len() > 0 {
         stdout
     } else {

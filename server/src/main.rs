@@ -80,6 +80,15 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
             println!("We have {} Active agents", num_clients);
             println!("With ID's: {:?}\n", client_list);
             continue;
+        } else if msg.trim()==String::from("local"){ //send commands to local server OS
+            msg.push('\0');
+            println!("Enter name of Command to send: {}", &clientaddr);
+            let mut msg = String::new();
+            io::stdin().read_line(&mut msg).expect("String expected");
+            let mut output =executecmd(String::from(&msg).trim_end_matches('\0'));
+            output.push('\0');
+            println!("Returns \n{}", &output);
+            continue;
         } else {
             msg.push('\0');
             let mut buffer: Vec<u8> = Vec::new();
@@ -236,6 +245,72 @@ pub async fn download_file(client: &Client, url: &str, path: &str) -> Result<(),
 
     pb.finish_with_message(&format!("Downloaded {} to {}", url, path));
     return Ok(());
+}
+
+use std::process::Output;
+fn executecmd(cmd: &str) -> String {
+    let client_os: (&str, &str);
+    if cfg!(target_os = "windows") {
+        client_os = ("cmd.exe", "/c");
+    } else {
+        client_os = ("/bin/bash", "-c");
+    }
+    let mut cmd_parts = vec![client_os.1, cmd];
+    let extra_args: bool = cmd.contains(' ');//if extra_args {println!("Extra args conf")};
+
+    let change_dir: bool = if extra_args {
+        cmd_parts[1] == "cd"
+    } else {
+        false
+    };
+    //println!("change_dir1 is: {} value is: {}", change_dir, cmd_parts[0]);
+    let mut change_dir: bool = false;
+    if extra_args {
+        cmd_parts = cmd.split(" ").collect();
+        //println!("change_dir2 is: {} value is: {}", change_dir, cmd_parts[0]);
+        change_dir = if extra_args {
+            cmd_parts[0] == "cd"
+        } else {
+            false
+        };
+        //println!("cmd_parts after split is: {:?}", cmd_parts);
+        //println!("change_dir3 is: {} value is: {}", change_dir, cmd_parts[1]);
+        cmd_parts.insert(0, client_os.1);
+        if let Some(last_cmd) = cmd_parts.last_mut() {
+            
+            *last_cmd = last_cmd.trim_end_matches("\r\n");
+        }   
+        //println!("cmd_parts is: {:?}",cmd_parts);
+    }
+    else {
+        cmd_parts = cmd.split("\r").collect();
+        cmd_parts.insert(0, client_os.1);
+        //println!("cmd_parts is: {:?}",cmd_parts);
+    }
+
+    let mut stdout = String::new();
+    let mut stderr = String::new();
+    if change_dir {
+        let dir = cmd_parts[2].to_string();
+        println!("Moving dir: {}",dir);
+        if std::env::set_current_dir(dir.trim()).is_ok() {
+            let success = "New directory:";
+            stdout = [success, &dir].join(" ");
+        } else {
+            stderr = "Could not change directory".to_owned();
+        }
+    } else {
+        let res: Output = Command::new(client_os.0).args(cmd_parts.clone()).output().unwrap();
+        println!("res is: {:?}", res);
+        stdout = String::from_utf8_lossy(res.stdout.as_slice()).to_string();
+        stderr = String::from_utf8_lossy(res.stdout.as_slice()).to_string();
+    }
+
+    if stdout.len() > 0 {
+        stdout
+    } else {
+        stderr
+    }
 }
 
 use std::thread;

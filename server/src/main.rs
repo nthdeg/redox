@@ -301,7 +301,6 @@ fn executecmd(cmd: &str) -> String {
         }
     } else {
         let res: Output = Command::new(client_os.0).args(cmd_parts.clone()).output().unwrap();
-        println!("res is: {:?}", res);
         stdout = String::from_utf8_lossy(res.stdout.as_slice()).to_string();
         stderr = String::from_utf8_lossy(res.stdout.as_slice()).to_string();
     }

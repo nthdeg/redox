@@ -105,20 +105,23 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
                 println!(" rx,                       Asks for filename to receive from client in current directory\n");
                 println!(" quit,                     Quits current client connection\n");
                 println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
+                println!(" local,                    Allows commands to send to local server OS while in shell\n");
             } else if cfg!(unix) { 
                 println!("Usage: [COMMAND]           Gives result\n");
                 println!(" dl,                       Asks for source url and filename to write\n");
                 println!(" tx,                       Asks for filename to send from server in current directory\n");
                 println!(" rx,                       Asks for filename to receive from client in current directory\n");
-                println!(" quit,                     Displays quits current client connection\n");
+                println!(" quit,                     Quits current client connection\n");
                 println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
+                println!(" local,                    Allows commands to send to local server OS while in shell\n");
             } else if cfg!(target_os = "macos") {
                 println!("Usage: [COMMAND]           Gives result\n");
                 println!(" dl,                       Asks for source url and filename to write\n");
                 println!(" tx,                       Asks for filename to send from server in current directory\n");
                 println!(" rx,                       Asks for filename to receive from client in current directory\n");
-                println!(" quit,                     Displays quits current client connection\n");
+                println!(" quit,                     Quits current client connection\n");
                 println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
+                println!(" local,                    Allows commands to send to local server OS while in shell\n");
             }
         }
         msg.push('\0');

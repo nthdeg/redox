@@ -271,7 +271,6 @@ fn executecmd(cmd: &str) -> String {
     if extra_args {
         //change so that we dont split for unix as then strip \r off
         if cfg!(unix){
-            println!("is unix");
             //adding fix for linux cleaning to last entry
             let last_length = cmd_parts.len()-1;
             let tempparts = cmd_parts[last_length];

@@ -22,7 +22,7 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
         Type 'rtfm' for help \n", clientsocket.local_addr().unwrap(),clientaddr,num_clients,client_list,); //,clients.keys(), clientsocket.local_addr().unwrap(),clientaddr); // {:?} inside Map
 
     loop {
-        println!("Enter Command to send: ");
+        println!("Enter Command to send Agent-{} : ",clientaddr);
         let mut msg = String::new();
         io::stdin().read_line(&mut msg).expect("String expected");
         if msg.trim()==String::from("dl"){

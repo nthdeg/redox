@@ -11,9 +11,6 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
     let num_clients = client_list.len();
     println!(" 
 
-                    █▄─▄▄▀█▄─▄▄─█▄─▄▄▀█─▄▄─█▄─▀─▄█
-                    ██─▄─▄██─▄█▀██─██─█─██─██▀─▀██
-                    ▀▄▄▀▄▄▀▄▄▄▄▄▀▄▄▄▄▀▀▄▄▄▄▀▄▄█▄▄▀  
         _______________________________________________________________       
         Active:   Server: {} <- Client: {}      
         _______________________________________________________________
@@ -251,7 +248,7 @@ use std::sync::{Arc, Mutex};
 async fn main() { 
     // set ip address and port here
     let mut ipaddy = "0.0.0.0".to_string();
-    let port = 5358;
+    let port = 5359;
     let port2 = "9001".to_string(); // for tx and rx of files
     
     let serveraddress = format!("{}:{}",ipaddy,port);
@@ -272,6 +269,16 @@ async fn main() {
     };
     let listener = TcpListener::bind(serveraddress.to_string()).unwrap();
     let clients: Arc<Mutex<HashMap<String, TcpStream>>> = Arc::new(Mutex::new(HashMap::new()));
+
+    println!(" 
+
+                    █▄─▄▄▀█▄─▄▄─█▄─▄▄▀█─▄▄─█▄─▀─▄█
+                    ██─▄─▄██─▄█▀██─██─█─██─██▀─▀██
+                    ▀▄▄▀▄▄▀▄▄▄▄▄▀▄▄▄▄▀▀▄▄▄▄▀▄▄█▄▄▀ 
+                    
+                    ");
+
+    println!("Waiting for connections...");
 
     // v2 using multi threading
     for stream in listener.incoming() {

@@ -112,7 +112,6 @@ fn send_to_server(socket:&mut TcpStream, filename: & str) -> std::io::Result<()>
     let filename = file_path.file_name().unwrap().to_str().unwrap();
     let filename_bytes = filename.as_bytes();
     let filename_len = filename_bytes.len();
-    socket.write_all(&filename_bytes)?;
 
     println!(
         "Sent filenm with {:?} bytes and contents: {}",

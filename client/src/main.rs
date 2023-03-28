@@ -62,44 +62,41 @@ fn executecmd(cmd: &str) -> String {
 }
 use std::io::{Read};
 use std::path::Path;
-fn handle_client_tx(mut stream: TcpStream){
-    let mut filename = [0; 128];
-    let bytes_read = stream.read(&mut filename).unwrap();
-    let original_filename = std::str::from_utf8(&filename[..bytes_read]).unwrap().trim();
-    println!("Received file {}", original_filename);
-    let mut newfilname = String::from(original_filename);println!("File {}", newfilname);
-    let mut file = std::fs::File::create(original_filename).unwrap();
+use tokio::time::{Duration};
+use std::fs::Metadata;
+fn handle_client_tx(stream: &mut TcpStream, filename: & str) -> std::io::Result<()> { //receiveing from server
+    println!("Creating file {}", filename.replace('\n', "").replace('\r', ""));
+
+    // Get File contentsuse std::io::{Read};
+use std::path::Path;
+use tokio::time::{Duration};
+use std::fs::Metadata;
+    let mut file = File::create(filename.replace('\n', "").replace('\r', "")).unwrap();
     let mut buffer = [0; 1024];
+    let mut total_bytes_read = 0;
+
+    // Get the expected file size
+    println!("getting expec");
+    let expected_file_size = fs::metadata(filename.replace('\n', "").replace('\r', ""))?.len();
+
     loop {
-        let bytes_read = stream.read(&mut buffer).unwrap();
+        let bytes_read = stream.read(&mut buffer)?;
         if bytes_read == 0 {
+            println!("breaking in loop of tx");
             break;
         }
-        let data = &buffer[..bytes_read];
-        file.write_all(data).unwrap();
-    }
-    println!("Saved file {}", original_filename);
-}
-
- fn clienttx(filenm: String, serveraddresstx: String) {
-    let mut listener = TcpListener::bind(serveraddresstx.clone()).unwrap();
-    println!("sver check: {}", serveraddresstx);
-    println!("Binded");
-    for stream in listener.incoming() {
-        println!("in Stream");
-        match stream {
-            Ok(stream) => { println!("in Stream");
-                std::thread::spawn(|| {
-                    println!("handling client fcn");
-                    handle_client_tx(stream);
-                });  return drop(listener);
-            }
-            Err(e) => {
-                println!("Error: {}", e);
-            }
+        total_bytes_read += bytes_read;
+        file.write_all(&buffer[..bytes_read])?;
+        if total_bytes_read >= expected_file_size.try_into().unwrap() {
+            // File transfer complete, close the file and return
+            file.flush()?;
+            return Ok(());
         }
-    }
-    drop(listener);
+        }
+    Err(std::io::Error::new(
+        std::io::ErrorKind::Other,
+        "File transfer incomplete",
+    ))
 }
 
 use std::fs;

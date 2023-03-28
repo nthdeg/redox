@@ -87,7 +87,7 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
             io::stdin().read_line(&mut msg).expect("String expected");
             let mut output =executecmd(String::from(&msg).trim_end_matches('\0'));
             output.push('\0');
-            println!("Returns \n{}", &output);
+            println!("Local Returns \n\n{}", &output);
             continue;
         } else {
             msg.push('\0');
@@ -270,8 +270,6 @@ fn executecmd(cmd: &str) -> String {
     let mut change_dir: bool = false;
     let mut cmd_parts_temp: Vec<&str> = ["",""].to_vec();// = cmd.split(" ").collect();
     if extra_args {
-        println!("cmd_parts before splitting: {:?}", cmd_parts);
-
         //change so that we dont split for unix as then strip \r off
         if cfg!(unix){
             println!("is unix");
@@ -279,17 +277,11 @@ fn executecmd(cmd: &str) -> String {
             let last_length = cmd_parts.len()-1;
             let tempparts = cmd_parts[last_length];
             let tempparts2 = tempparts.trim_end_matches("\n");
-            println!("cmd_parts is in unix: {:?}",cmd_parts);
-            
             cmd_parts[last_length] = tempparts2;
-            println!("cmd_parts is in unix after fix is: {:?}",cmd_parts);
         }
         else {
             cmd_parts = cmd.split(" ").collect();
         }
-        
-
-        println!("after split by spc: {:?}", cmd_parts);
         
         //println!("change_dir2 is: {} value is: {}", change_dir, cmd_parts[0]);
         change_dir = if extra_args {
@@ -307,12 +299,10 @@ fn executecmd(cmd: &str) -> String {
                 false
             };
         }
-        println!("extra_args: {} and {} cmd_aprts is: {}, {}", extra_args, change_dir, cmd_parts[1], cmd_parts_temp[1]);
         //println!("cmd_parts after split is: {:?}", cmd_parts);
         //println!("change_dir3 is: {} value is: {}", change_dir, cmd_parts[1]);
         cmd_parts.insert(0, client_os.1);
         if let Some(last_cmd) = cmd_parts.last_mut() {
-            
             *last_cmd = last_cmd.trim_end_matches("\r\n");
         }   
         //println!("cmd_parts is: {:?}",cmd_parts);
@@ -320,7 +310,6 @@ fn executecmd(cmd: &str) -> String {
     else {
         cmd_parts = cmd.split("\r").collect();
         cmd_parts.insert(0, client_os.1);
-        println!("cmd_parts is in else: {:?}",cmd_parts);
     }
 
     let mut stdout = String::new();
@@ -337,16 +326,14 @@ fn executecmd(cmd: &str) -> String {
         //let dir = cmd_parts[2].to_string();
         println!("Moving dir: {}",dir);
         if std::env::set_current_dir(dir.trim()).is_ok() {
-            let success = "New directory:";
+            let success = "Moved to new directory:";
             stdout = [success, &dir].join(" ");
         } else {
             stderr = "Could not change directory".to_owned();
         }
     } else {
-        println!("client_os.0 is: {:?}", client_os.0);
-        println!("cmd_parts.clone() is: {:?}", cmd_parts);
         let res: Output = Command::new(client_os.0).args(cmd_parts.clone()).output().unwrap();
-        println!("res is: {:?}", res);
+        
         stdout = String::from_utf8_lossy(res.stdout.as_slice()).to_string();
         stderr = String::from_utf8_lossy(res.stdout.as_slice()).to_string();
     }

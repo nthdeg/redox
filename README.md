@@ -71,7 +71,9 @@ cargo build --release
 ```
 ## Using the Tools
 
-Change port declarations (line 264 - 265 Server side, and line 189-191 on the implant) and launch server.
+After running the C2 server, type `build` at the home menu to set ip and port for the agent to connect back to (C2 server public IP, port is defaulted to 9001), the agent program (implant) is available in the client/target/release folder. Note this will build native client of OS in operation. Will be adding cross compiling soon.
+
+Type `rtfm` to get list of available commands.
 
 Place implant on desired device and run the program.
 

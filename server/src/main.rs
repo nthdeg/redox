@@ -313,7 +313,7 @@ fn handle_local(clients: &Arc<Mutex<HashMap<String, TcpStream>>>) {
                         let mut output =executecmd(String::from(&cmd_env_var_port).trim_end_matches('\0'));
                         output.push('\0');
                         println!("Local Returns \n{}", &output);
-                        let mut output =executecmd(String::from("cargo build --manifest-path=../client/Cargo.toml").trim_end_matches('\0'));
+                        let mut output =executecmd(String::from("cargo build --manifest-path=../client/Cargo.toml --release").trim_end_matches('\0'));
                         output.push('\0');
                         println!("Local Returns \n{}", &output);
 
@@ -325,7 +325,7 @@ fn handle_local(clients: &Arc<Mutex<HashMap<String, TcpStream>>>) {
                         let mut output =executecmd(String::from(&pwrsh_env_var_port).trim_end_matches('\0'));
                         output.push('\0');
                         println!("Local Returns \n{}", &output);
-                        let mut output =executecmd(String::from("cargo build --manifest-path=../client/Cargo.toml").trim_end_matches('\0'));
+                        let mut output =executecmd(String::from("cargo build --manifest-path=../client/Cargo.toml --release").trim_end_matches('\0'));
                         output.push('\0');
                         println!("Local Returns \n{}", &output);
 
@@ -338,7 +338,7 @@ fn handle_local(clients: &Arc<Mutex<HashMap<String, TcpStream>>>) {
                 let mut output =executecmd(String::from(&lnx_env_var_port).trim_end_matches('\0'));
                 output.push('\0');
                 println!("Local Returns \n{}", &output);
-                let mut output =executecmd(String::from("cargo build --manifest-path=../client/Cargo.toml").trim_end_matches('\0'));
+                let mut output =executecmd(String::from("cargo build --manifest-path=../client/Cargo.toml --release").trim_end_matches('\0'));
                 output.push('\0');
                 println!("Local Returns \n{}", &output);
                 continue;
@@ -350,7 +350,7 @@ fn handle_local(clients: &Arc<Mutex<HashMap<String, TcpStream>>>) {
                 let mut output =executecmd(String::from(&lnx_env_var_port).trim_end_matches('\0'));
                 output.push('\0');
                 println!("Local Returns \n{}", &output);
-                let mut output =executecmd(String::from("cargo build --manifest-path=../client/Cargo.toml").trim_end_matches('\0'));
+                let mut output =executecmd(String::from("cargo build --manifest-path=../client/Cargo.toml --release").trim_end_matches('\0'));
                 output.push('\0');
                 println!("Local Returns \n{}", &output);
                 continue;

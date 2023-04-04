@@ -21,7 +21,7 @@ When the implant is ran as user level, you can read and write to disk, run execu
 
 ## TODO:
 - [X] Add File transfer
-- [X] Organize and display all current connections
+- [ ] Organize and display all current connections
 - [ ] Run implant in memory only
 - [ ] Hide network traffic
 - [ ] Add tty support, for now tee relevant commands

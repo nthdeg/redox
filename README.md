@@ -30,6 +30,7 @@ When the implant is ran as user level, you can read and write to disk, run execu
 ## Features:
 - Upload and download files to/from agents
 - Build native OS agents from Server (Windows and Linux)
+- Local Staging Shell
 - Keylogger (Windows agents)
 
 ## Tools in this repo

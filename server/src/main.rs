@@ -5,7 +5,7 @@ use std::mem::drop;
 use std::net::{Shutdown, SocketAddrV4, TcpListener, TcpStream};
 use std::env;
 
-fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<String, TcpStream>>>, port2: &String) {
+fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<String, TcpStream>>>) {
     println!("New client connected: {}", clientsocket.local_addr().unwrap());
     let clientaddr = clientsocket.peer_addr().unwrap();
     let client_list = clients.lock().unwrap().keys().cloned().collect::<Vec<String>>();
@@ -584,10 +584,7 @@ async fn main() {
     // set ip address and port here
     let mut ipaddy = "0.0.0.0".to_string();
     let port = 9001;
-    let port2 = "9001".to_string(); // for tx and rx of files
-    
     let serveraddress = format!("{}:{}",ipaddy,port);
-    let serveraddresstx = format!("{}:{}",ipaddy,port2);
     let ip = ipaddy.parse::<Ipv4Addr>().unwrap();
     let portu16:u16 = port;
     let mut s = SocketAddrV4::new(ip, port);
@@ -606,9 +603,7 @@ async fn main() {
     let listener = TcpListener::bind(serveraddress.to_string()).unwrap();
     let clients: Arc<Mutex<HashMap<String, TcpStream>>> = Arc::new(Mutex::new(HashMap::new()));
     let mut clients_clone = clients.clone();
-
     println!("Waiting for connections...");
-
     handle_local(&clients_clone);
 
     // v1
@@ -616,7 +611,6 @@ async fn main() {
         match con {
             Ok(mut stream) =>{
                 clients_clone = clients.clone();
-                let port2clone = port2.clone();
                 let client_id = stream.peer_addr().unwrap().to_string();
                 clients_clone.lock().unwrap().insert(client_id.clone(), stream.try_clone().unwrap());
                 let client_list = clients_clone.lock().unwrap()
@@ -627,7 +621,7 @@ async fn main() {
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>();
             println!("Client list is: {:?}\n Connected clients are: {:?}", clients_clone, client_list);
-                handle_connection(&mut stream, &clients_clone, &port2clone);
+                handle_connection(&mut stream, &clients_clone);
                 clients_clone.lock().unwrap().remove(&client_id);
                 let client_list = clients_clone.lock().unwrap().keys().cloned().collect::<Vec<String>>().iter()
                 .map(|s| s.to_string())

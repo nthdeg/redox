@@ -13,6 +13,7 @@ When the implant is ran as user level, you can read and write to disk, run execu
 
 - [Redox](#redox)
   * [To Do](#todo)
+  * [Features](#features)
   * [Tools in this repo](#tools-in-this-repo)
   * [Compiling the tools](#compiling-the-tools)
   * [Using the tools](#using-the-tools)
@@ -26,6 +27,10 @@ When the implant is ran as user level, you can read and write to disk, run execu
 - [ ] Hide network traffic
 - [ ] Add tty support, for now tee relevant commands
 
+## Features:
+- Upload and download files to/from agents
+- Build native OS agents from Server (Windows and Linux)
+- Keylogger (Windows agents)
 
 ## Tools in this repo
 

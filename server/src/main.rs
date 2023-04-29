@@ -25,6 +25,37 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
         println!("Enter Command to send Agent-{} : ",clientaddr);
         let mut msg = String::new();
         io::stdin().read_line(&mut msg).expect("String expected");
+        if msg.trim()==String::from("rtfm"){ 
+            println!("THE MANUAL_________________________________________________________________\n");
+            if cfg!(windows) {
+                println!("Usage: [COMMAND]           Gives result\n");
+                println!(" dl,                       Asks for source url and filename to write\n");
+                println!(" tx,                       Asks for filename to send from server in current directory\n");
+                println!(" rx,                       Asks for filename to receive from client in current directory\n");
+                println!(" quit,                     Quits current client connection\n");
+                println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
+                println!(" local,                    Allows commands to send to local server OS while in shell\n");
+                println!(" build,                    Builds agent program, given server IP and port to connect to\n");
+            } else if cfg!(unix) { 
+                println!("Usage: [COMMAND]           Gives result\n");
+                println!(" dl,                       Available after connection, Asks for source url and filename to write\n");
+                println!(" tx,                       Available after connection, Asks for filename to send from server in current directory\n");
+                println!(" rx,                       Available after connection, Asks for filename to receive from client in current directory\n");
+                println!(" quit,                     Quits current client connection\n");
+                println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
+                println!(" local,                    Allows commands to send to local server OS while in shell\n");
+                println!(" build,                    Builds agent program, given server IP and port to connect to\n");
+            } else if cfg!(target_os = "macos") {
+                println!("Usage: [COMMAND]           Gives result\n");
+                println!(" dl,                       Available after connection, Asks for source url and filename to write\n");
+                println!(" tx,                       Available after connection, Asks for filename to send from server in current directory\n");
+                println!(" rx,                       Available after connection, Asks for filename to receive from client in current directory\n");
+                println!(" quit,                     Quits current client connection\n");
+                println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
+                println!(" local,                    Allows commands to send to local server OS while in shell\n");
+                println!(" build,                    Builds agent program, given server IP and port to connect to\n");
+            }
+        }
         if msg.trim().contains("dl"){
             msg.push('\0');
             let mut buffer: Vec<u8> = Vec::new();
@@ -178,38 +209,6 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
             println!("Sent {}", &msg);
             let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
         }
-        if msg.trim()==String::from("rtfm"){ 
-            println!("THE MANUAL_________________________________________________________________\n");
-            if cfg!(windows) {
-                println!("Usage: [COMMAND]           Gives result\n");
-                println!(" dl,                       Asks for source url and filename to write\n");
-                println!(" tx,                       Asks for filename to send from server in current directory\n");
-                println!(" rx,                       Asks for filename to receive from client in current directory\n");
-                println!(" quit,                     Quits current client connection\n");
-                println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
-                println!(" local,                    Allows commands to send to local server OS while in shell\n");
-                println!(" build,                    Builds agent program, given server IP and port to connect to\n");
-            } else if cfg!(unix) { 
-                println!("Usage: [COMMAND]           Gives result\n");
-                println!(" dl,                       Available after connection, Asks for source url and filename to write\n");
-                println!(" tx,                       Available after connection, Asks for filename to send from server in current directory\n");
-                println!(" rx,                       Available after connection, Asks for filename to receive from client in current directory\n");
-                println!(" quit,                     Quits current client connection\n");
-                println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
-                println!(" local,                    Allows commands to send to local server OS while in shell\n");
-                println!(" build,                    Builds agent program, given server IP and port to connect to\n");
-            } else if cfg!(target_os = "macos") {
-                println!("Usage: [COMMAND]           Gives result\n");
-                println!(" dl,                       Available after connection, Asks for source url and filename to write\n");
-                println!(" tx,                       Available after connection, Asks for filename to send from server in current directory\n");
-                println!(" rx,                       Available after connection, Asks for filename to receive from client in current directory\n");
-                println!(" quit,                     Quits current client connection\n");
-                println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
-                println!(" local,                    Allows commands to send to local server OS while in shell\n");
-                println!(" build,                    Builds agent program, given server IP and port to connect to\n");
-            }
-        }
-
         msg.push('\0');
         let mut buffer: Vec<u8> = Vec::new();
         if msg.trim().contains("quit"){

@@ -14,7 +14,7 @@ When the implant is ran as user level, you can read and write to disk, run execu
 - [Redox](#redox)
   * [To Do](#todo)
   * [Features](#features)
-  * [Tools in this repo](#tools-in-this-repo)
+  * [Programs in this repo](#programs-in-this-repo)
   * [Compiling the tools](#compiling-the-tools)
   * [Using the tools](#using-the-tools)
 

